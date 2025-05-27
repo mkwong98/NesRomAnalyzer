@@ -1,4 +1,5 @@
 ﻿Imports System.CodeDom
+Imports System.Collections.Specialized.BitVector32
 Imports System.Net
 Imports System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar
 Imports System.Windows.Forms.VisualStyles.VisualStyleElement.TreeView
@@ -423,23 +424,7 @@ Module analyzer
         For i As Integer = 0 To fullCode.Count - 1
             If fullCode(i).type = InstructionType.SUBROUTINE Then
                 Dim bi As instSubroutine = CType(fullCode(i), instSubroutine)
-                Dim j As Integer = 0
-                While j < codeSections.Count
-                    If codeSections(j).rangeStart <= bi.subRealAddress And codeSections(j).rangeEnd >= bi.subRealAddress Then
-                        'this section contains the subroutine
-                        Dim newSection As addressRange
-                        newSection.rangeStart = bi.subRealAddress
-                        newSection.rangeEnd = codeSections(j).rangeEnd
-                        codeSections.Insert(j + 1, newSection)
-
-                        section = codeSections(j)
-                        Dim si As Integer = findInstructionIndex(bi.subRealAddress, 0, fullCode.Count - 1)
-                        section.rangeEnd = fullCode(si - 1).realAddress
-                        codeSections(j) = section
-                        Exit While
-                    End If
-                    j += 1
-                End While
+                splitSection(UInt16.MaxValue, bi.subRealAddress)
             End If
         Next
 
@@ -450,89 +435,13 @@ Module analyzer
                 Select Case fullCode(i).type
                     Case InstructionType.BRANCH, InstructionType.COMPARE_BRANCH, InstructionType.LOAD_BRANCH
                         Dim b As instPBranch = CType(fullCode(i), instPBranch)
-                        Dim j As Integer = 0
-                        While j < codeSections.Count
-                            If codeSections(j).rangeStart < b.branchToAddress And codeSections(j).rangeEnd >= b.branchToAddress _
-                                And (codeSections(j).rangeStart > b.realAddress Or codeSections(j).rangeEnd < b.realAddress) Then
-                                'this section contains the branch target but not the branch instruction
-                                Dim newSection As addressRange
-                                newSection.rangeStart = b.branchToAddress
-                                newSection.rangeEnd = codeSections(j).rangeEnd
-                                codeSections.Insert(j + 1, newSection)
-                                section = codeSections(j)
-                                Dim si As Integer = findInstructionIndex(b.branchToAddress, 0, fullCode.Count - 1)
-                                section.rangeEnd = fullCode(si - 1).realAddress
-                                codeSections(j) = section
-                                sectionAdded = True
-                                Exit While
-                            End If
-                            j += 1
-                        End While
+                        sectionAdded = sectionAdded Or splitSection(b.realAddress, b.branchToAddress)
                     Case InstructionType.JUMP
                         Dim b As instJump = CType(fullCode(i), instJump)
-                        Dim j As Integer = 0
-                        While j < codeSections.Count
-                            If codeSections(j).rangeStart < b.jumpToRealAddress And codeSections(j).rangeEnd >= b.jumpToRealAddress _
-                                And (codeSections(j).rangeStart > b.realAddress Or codeSections(j).rangeEnd < b.realAddress) Then
-                                'this section contains the jump instruction
-                                Dim newSection As addressRange
-                                newSection.rangeStart = b.jumpToRealAddress
-                                newSection.rangeEnd = codeSections(j).rangeEnd
-                                codeSections.Insert(j + 1, newSection)
-                                section = codeSections(j)
-                                Dim si As Integer = findInstructionIndex(b.jumpToRealAddress, 0, fullCode.Count - 1)
-                                section.rangeEnd = fullCode(si - 1).realAddress
-                                codeSections(j) = section
-                                sectionAdded = True
-                                Exit While
-                            End If
-                            j += 1
-                        End While
+                        sectionAdded = sectionAdded Or splitSection(b.realAddress, b.jumpToRealAddress)
                 End Select
             Next
         End While
-
-        'Dim lastAddress As UInt32 = section.rangeStart
-        'Dim lastIsSubWithReturn As Boolean = False
-        'For i As Integer = 1 To fullCode.Count - 1
-
-
-        'Dim isNewSection As Boolean = True
-        'If lastIsSubWithReturn Then
-        '    isNewSection = False
-        '    lastIsSubWithReturn = False
-        'End If
-
-        'For Each b As UInt32 In fullCode(i).backSource
-        '    If b >= section.rangeStart And b <= section.rangeEnd Then
-        '        Dim si As Integer = findInstructionIndex(b, 0, fullCode.Count - 1)
-        '        If si <> -1 Then
-        '            If fullCode(si).type <> InstructionType.SUBROUTINE Then
-        '                isNewSection = False
-        '                Exit For
-        '            End If
-        '        End If
-        '    End If
-        'Next
-
-        ''check if this instruction is a subroutine with normal return
-        'If fullCode(i).type = InstructionType.SUBROUTINE Then
-        '    Dim bi As instSubroutine = CType(fullCode(i), instSubroutine)
-        '    If bi.hasReturned Then
-        '        lastIsSubWithReturn = True
-        '    End If
-        'End If
-        'If isNewSection Then
-        '    codeSections.Add(section)
-        '    section.rangeStart = fullCode(i).realAddress
-        '    section.rangeEnd = section.rangeStart
-        'Else
-        '    If fullCode(i).realAddress > section.rangeEnd Then
-        '        section.rangeEnd = fullCode(i).realAddress
-        '    End If
-        'End If
-        'Next
-
 
         Dim s As String = ""
         For Each i As instruction In fullCode
@@ -588,6 +497,28 @@ Module analyzer
         Next
         frm.txtAnaCode4.Text = s
     End Sub
+
+    Public Function splitSection(sourceAddress As UInt16, jumpAddress As UInt16) As Boolean
+        Dim j As Integer = 0
+        While j < codeSections.Count
+            If codeSections(j).rangeStart < jumpAddress And codeSections(j).rangeEnd >= jumpAddress _
+                And (codeSections(j).rangeStart > sourceAddress Or codeSections(j).rangeEnd < sourceAddress) Then
+                'this section contains the target
+                Dim newSection As addressRange
+                newSection.rangeStart = jumpAddress
+                newSection.rangeEnd = codeSections(j).rangeEnd
+                codeSections.Insert(j + 1, newSection)
+
+                Dim oldSection As addressRange = codeSections(j)
+                Dim si As Integer = findInstructionIndex(jumpAddress, 0, fullCode.Count - 1)
+                oldSection.rangeEnd = fullCode(si - 1).realAddress
+                codeSections(j) = oldSection
+                Return True
+            End If
+            j += 1
+        End While
+        Return False
+    End Function
 
     Public Sub loadBlocksFromString(s As String)
         Do Until s = ""
