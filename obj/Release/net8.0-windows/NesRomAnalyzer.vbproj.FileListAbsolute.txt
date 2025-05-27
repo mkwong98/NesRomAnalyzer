@@ -1,0 +1,16 @@
+C:\Users\user\source\repos\NesRomAnalyzer\NesRomAnalyzer\bin\Release\net8.0-windows\NesRomAnalyzer.exe
+C:\Users\user\source\repos\NesRomAnalyzer\NesRomAnalyzer\bin\Release\net8.0-windows\NesRomAnalyzer.deps.json
+C:\Users\user\source\repos\NesRomAnalyzer\NesRomAnalyzer\bin\Release\net8.0-windows\NesRomAnalyzer.runtimeconfig.json
+C:\Users\user\source\repos\NesRomAnalyzer\NesRomAnalyzer\bin\Release\net8.0-windows\NesRomAnalyzer.dll
+C:\Users\user\source\repos\NesRomAnalyzer\NesRomAnalyzer\bin\Release\net8.0-windows\NesRomAnalyzer.pdb
+C:\Users\user\source\repos\NesRomAnalyzer\NesRomAnalyzer\obj\Release\net8.0-windows\NesRomAnalyzer.frmMain.resources
+C:\Users\user\source\repos\NesRomAnalyzer\NesRomAnalyzer\obj\Release\net8.0-windows\NesRomAnalyzer.vbproj.GenerateResource.cache
+C:\Users\user\source\repos\NesRomAnalyzer\NesRomAnalyzer\obj\Release\net8.0-windows\NesRomAnalyzer.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\user\source\repos\NesRomAnalyzer\NesRomAnalyzer\obj\Release\net8.0-windows\NesRomAnalyzer.AssemblyInfoInputs.cache
+C:\Users\user\source\repos\NesRomAnalyzer\NesRomAnalyzer\obj\Release\net8.0-windows\NesRomAnalyzer.AssemblyInfo.vb
+C:\Users\user\source\repos\NesRomAnalyzer\NesRomAnalyzer\obj\Release\net8.0-windows\NesRomAnalyzer.vbproj.CoreCompileInputs.cache
+C:\Users\user\source\repos\NesRomAnalyzer\NesRomAnalyzer\obj\Release\net8.0-windows\NesRomAnalyzer.dll
+C:\Users\user\source\repos\NesRomAnalyzer\NesRomAnalyzer\obj\Release\net8.0-windows\refint\NesRomAnalyzer.dll
+C:\Users\user\source\repos\NesRomAnalyzer\NesRomAnalyzer\obj\Release\net8.0-windows\NesRomAnalyzer.pdb
+C:\Users\user\source\repos\NesRomAnalyzer\NesRomAnalyzer\obj\Release\net8.0-windows\NesRomAnalyzer.genruntimeconfig.cache
+C:\Users\user\source\repos\NesRomAnalyzer\NesRomAnalyzer\obj\Release\net8.0-windows\ref\NesRomAnalyzer.dll
