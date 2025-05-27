@@ -44,30 +44,24 @@ Public Class instJumpBlock
         Select Case jumpType
             Case JumpBlockType.JSR
                 'push pc to stack
-                s &= tabStr & "mStack.push({true, " & realAddressToHexStr(realAddress) & "});" & vbCrLf
-                s &= tabStr & "mStack.push({true, " & realAddressToHexStr(realAddress) & "});" & vbCrLf
+                s &= tabStr & "pushAddress(0x" & realAddressToHexStr(realAddress) & ");" & vbCrLf
                 s &= tabStr & blockName & "();" & vbCrLf
-                s &= tabStr & "poppedEntry = mStack.top();" & vbCrLf
-                s &= tabStr & "mStack.pop();" & vbCrLf
-                s &= tabStr & "mStack.pop();" & vbCrLf
-                s &= tabStr & "if (poppedEntry.value != " & realAddressToHexStr(realAddress) & ") return;" & vbCrLf
+                s &= tabStr & "popAddress();" & vbCrLf
+                s &= tabStr & "if (poppedEntry.value != 0x" & realAddressToHexStr(realAddress) & ") return;" & vbCrLf
 
             Case JumpBlockType.JMP
                 s &= tabStr & blockName & "();" & vbCrLf
                 s &= tabStr & "return;" & vbCrLf
 
             Case JumpBlockType.BRK
-                s &= tabStr & "mStack.push({true, " & realAddressToHexStr(realAddress) & "});" & vbCrLf
-                s &= tabStr & "mStack.push({true, " & realAddressToHexStr(realAddress) & "});" & vbCrLf
+                s &= tabStr & "pushAddress(0x" & realAddressToHexStr(realAddress) & ");" & vbCrLf
                 s &= tabStr & "flgB = true;" & vbCrLf
                 s &= tabStr & "mStack.push({false, getStatus()});" & vbCrLf
                 s &= tabStr & blockName & "();" & vbCrLf
-                s &= tabStr & "poppedEntry = mStack.top();" & vbCrLf
-                s &= tabStr & "setStatus(poppedEntry.value);" & vbCrLf
+                s &= tabStr & "setStatus(mStack.top().value);" & vbCrLf
                 s &= tabStr & "flgB = false;" & vbCrLf
                 s &= tabStr & "mStack.pop();" & vbCrLf
-                s &= tabStr & "mStack.pop();" & vbCrLf
-                s &= tabStr & "mStack.pop();" & vbCrLf
+                s &= tabStr & "popAddress();" & vbCrLf
 
         End Select
         Return s

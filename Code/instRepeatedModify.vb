@@ -49,16 +49,17 @@
 
     Public Overrides Function printToCode(tabStr As String) As String
         '"INC", "DEC", "INX", "DEX", "INY", "DEY", "ASL", "LSR", "ROL", "ROR"
-        Select Case opName
+        Dim op As String = Mid(opName, 1, 3)
+        Select Case op
             Case "INC", "DEC"
-                Return tabStr & "op" & opName & "(" & printMemoryTargetAsAddress(operand) & ", " & repeatedTimes.ToString & ");" & vbCrLf
+                Return tabStr & "op" & op & "(" & printMemoryTargetAsAddress(operand) & ", " & repeatedTimes.ToString & ");" & vbCrLf
             Case "INX", "DEX", "INY", "DEY"
-                Return tabStr & "op" & opName & "(" & repeatedTimes.ToString & ");" & vbCrLf
+                Return tabStr & "op" & op & "(" & repeatedTimes.ToString & ");" & vbCrLf
             Case Else
-                If operand.addrMode = AddressingMode.ACCUMULATOR Then
-                    Return tabStr & "op" & opName & "_A(" & repeatedTimes.ToString & ");" & vbCrLf
+                If operand.addrMode = AddressingMode.ACCUMULATOR Or operand.addrMode = AddressingMode.IMPLICIT Then
+                    Return tabStr & "op" & op & "_A(" & repeatedTimes.ToString & ");" & vbCrLf
                 Else
-                    Return tabStr & "op" & opName & "_M(" & printMemoryTargetAsAddress(operand) & ", " & repeatedTimes.ToString & ");" & vbCrLf
+                    Return tabStr & "op" & op & "_M(" & printMemoryTargetAsAddress(operand) & ", " & repeatedTimes.ToString & ");" & vbCrLf
                 End If
         End Select
     End Function

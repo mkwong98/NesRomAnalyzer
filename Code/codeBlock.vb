@@ -199,9 +199,9 @@ Public MustInherit Class codeBlock
             Case AddressingMode.ABSOLUTE_INDEXED_Y
                 s &= "0x" & t.address.ToString("X4") & " + y"
             Case AddressingMode.INDEXED_INDIRECT_X
-                s &= "myMapper->readCPU((" & "0x" & t.address.ToString("X4") & " + x) & 0x00ff) + (myMapper->readCPU((" & "0x" & t.address.ToString("X4") & " + x + 1) & 0x00ff) << 8)"
+                s &= "myMapper->readCPU((0x" & t.address.ToString("X4") & " + x) & 0x00ff) + (myMapper->readCPU((0x" & t.address.ToString("X4") & " + x + 1) & 0x00ff) << 8)"
             Case AddressingMode.INDIRECT_INDEXED_Y
-                s &= "myMapper->readCPU(" & "0x" & t.address.ToString("X4") & " + (myMapper->readCPU((" & "0x" & t.address.ToString("X4") & " + 1) & 0x00ff) << 8) + y"
+                s &= "myMapper->readCPU(0x" & t.address.ToString("X4") & ") + (myMapper->readCPU((0x" & t.address.ToString("X4") & " + 1) & 0x00ff) << 8) + y"
         End Select
         Return s
     End Function

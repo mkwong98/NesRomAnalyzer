@@ -52,7 +52,7 @@
             Case "INX", "DEX", "INY", "DEY"
                 Return tabStr & "op" & opName & "(1);" & vbCrLf
             Case Else
-                If operand.addrMode = AddressingMode.ACCUMULATOR Then
+                If operand.addrMode = AddressingMode.ACCUMULATOR Or operand.addrMode = AddressingMode.IMPLICIT Then
                     Return tabStr & "op" & opName & "_A(1);" & vbCrLf
                 Else
                     Return tabStr & "op" & opName & "_M(" & printMemoryTargetAsAddress(operand) & ", 1);" & vbCrLf
