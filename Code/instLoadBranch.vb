@@ -64,12 +64,22 @@
 
     Public Overrides Function printToCode(tabStr As String) As String
         Dim s As String = printMemoryTargetToCode(operand, True)
-        Select Case useFlag
-            Case FlagID.z
-                s &= " == 0"
-            Case FlagID.n
-                s &= " & 0x80"
-        End Select
+        If flagIsSet Then
+            Select Case useFlag
+                Case FlagID.z
+                    s &= " == 0"
+                Case FlagID.n
+                    s &= " & 0x80"
+            End Select
+        Else
+            Select Case useFlag
+                Case FlagID.z
+                    s &= " != 0"
+                Case FlagID.n
+                    s = "!(" & s & " & 0x80)"
+            End Select
+        End If
+
         Return s
     End Function
 End Class

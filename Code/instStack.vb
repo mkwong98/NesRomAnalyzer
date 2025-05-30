@@ -43,10 +43,19 @@
 
     Public Overrides Function printToCode(tabStr As String) As String
         If isPush Then
-            Return tabStr & "mStack.push({false, " & printMemoryTargetToCode(createCPURegisterMemoryTarget(regToKeep), True) & "});" & vbCrLf
+            If regToKeep = CpuRegister.a Then
+                Return tabStr & "mStack.push({false, a});" & vbCrLf
+            Else
+                Return tabStr & "pushStatus();" & vbCrLf
+            End If
+
         Else
             Dim s As String = ""
-            s &= tabStr & printMemoryTargetToCode(createCPURegisterMemoryTarget(regToKeep), True) & " = mStack.top().value;" & vbCrLf
+            If regToKeep = CpuRegister.a Then
+                s &= tabStr & "a = mStack.top().value;" & vbCrLf
+            Else
+                s &= tabStr & "popStatus();" & vbCrLf
+            End If
             s &= tabStr & "mStack.pop();" & vbCrLf
             Return s
         End If

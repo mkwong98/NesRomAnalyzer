@@ -1,6 +1,7 @@
 ﻿Imports System.CodeDom
 Imports System.Collections.Specialized.BitVector32
 Imports System.Net
+Imports System.Runtime.InteropServices
 Imports System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar
 Imports System.Windows.Forms.VisualStyles.VisualStyleElement.TreeView
 Imports Microsoft.VisualBasic.Devices
@@ -1098,6 +1099,7 @@ Module analyzer
     End Sub
 
     Private Sub convertToBlocks()
+        Dim sdx As Integer
         blocks.Clear()
 
         For Each i As addressRange In codeSections
@@ -1140,13 +1142,11 @@ Module analyzer
                 idx += 1
             Loop
 
-            Dim sdx As Integer
-            'check for possible splits
-
-            If i.rangeStart = &H85F Then
-                Dim a As Integer = 0
+            If i.rangeStart < &H12DF And i.rangeEnd > &H12DF Then
+                Dim test As Boolean = True
             End If
 
+            'check for possible splits
             Dim sectionAdded As Boolean = True
             While sectionAdded
                 sectionAdded = False
@@ -1240,7 +1240,7 @@ Module analyzer
                     Dim tdx = sdx + 1
                     While tdx <= structureList.Count - 1
                         Dim tStruct2 As structRange = structureList(tdx)
-                        If tStruct.rangeStart < tStruct2.rangeStart And tStruct.rangeEnd > tStruct2.rangeStart And tStruct.rangeEnd < tStruct2.rangeEnd Then
+                        If tStruct.rangeStart <= tStruct2.rangeStart And tStruct.rangeEnd >= tStruct2.rangeStart And tStruct.rangeEnd < tStruct2.rangeEnd Then
                             If tStruct.type = BlockType.IF_BLOCK Or tStruct.type = BlockType.Else_BLOCK Then
                                 'find the section and split
                                 Dim xdx As Integer = 0
@@ -1269,7 +1269,7 @@ Module analyzer
                                     xdx += 1
                                 End While
                             End If
-                        ElseIf tStruct2.rangeStart < tStruct.rangeStart And tStruct2.rangeEnd > tStruct.rangeStart And tStruct2.rangeEnd < tStruct.rangeEnd Then
+                        ElseIf tStruct2.rangeStart <= tStruct.rangeStart And tStruct2.rangeEnd >= tStruct.rangeStart And tStruct2.rangeEnd < tStruct.rangeEnd Then
                             If tStruct2.type = BlockType.IF_BLOCK Or tStruct2.type = BlockType.Else_BLOCK Then
                                 'find the section and split
                                 Dim xdx As Integer = 0
@@ -1311,14 +1311,50 @@ Module analyzer
                     Dim bRange As addressRange = tblock.codeRange
                     Dim cdx As Integer = 0
                     While cdx <= tblock.code.Count - 1
-                        tInst = tblock.code(cdx)
                         Dim isStruct As Boolean = False
-                        For Each tStruct As structRange In structureList
-                            If tStruct.rangeStart = tInst.realAddress Or tStruct.rangeEnd = tInst.realAddress Then
-                                isStruct = True
-                                Exit For
-                            End If
-                        Next
+                        tInst = tblock.code(cdx)
+
+                        Select Case tInst.type
+                            Case InstructionType.JUMP
+                                Dim tJump As instJump = tInst
+                                For Each tStruct As structRange In structureList
+                                    Select Case tStruct.type
+                                        Case BlockType.LOOP_CONTENT
+                                            If tStruct.rangeEnd = tJump.realAddress Then
+                                                isStruct = True
+                                                Exit For
+                                            End If
+                                        Case BlockType.IF_BLOCK
+                                            If tStruct.rangeEnd = tJump.realAddress And tJump.jumpToRealAddress > tJump.realAddress Then
+                                                isStruct = True
+                                                Exit For
+                                            End If
+                                    End Select
+                                Next
+                            Case InstructionType.BRANCH, InstructionType.COMPARE_BRANCH, InstructionType.LOAD_BRANCH
+                                Dim tBranch As instPBranch = tInst
+                                For Each tStruct As structRange In structureList
+                                    Select Case tStruct.type
+                                        Case BlockType.BRANCH_LOOP
+                                            If tStruct.rangeEnd = tBranch.realAddress Then
+                                                isStruct = True
+                                                Exit For
+                                            End If
+                                        Case BlockType.LOOP_CONTENT
+                                            If tBranch.realAddress >= tStruct.rangeStart And tBranch.realAddress < tStruct.rangeEnd And tStruct.nextAddress = tBranch.branchToAddress Then
+                                                'exit condition for the loop
+                                                isStruct = True
+                                                Exit For
+                                            End If
+                                        Case BlockType.IF_BLOCK
+                                            If tStruct.rangeStart = tBranch.realAddress Then
+                                                isStruct = True
+                                                Exit For
+                                            End If
+                                    End Select
+                                Next
+                        End Select
+
                         If Not isStruct Then
                             Select Case tInst.type
                                 Case InstructionType.JUMP
@@ -1401,24 +1437,6 @@ Module analyzer
             End While
 
             'should be no more splitting
-            'Add jump block to each split
-            'sort the section blocks by start address
-            sectionBlocks.Sort(Function(a, b) a.codeRange.rangeStart.CompareTo(b.codeRange.rangeStart))
-            sdx = 0
-            While sdx < sectionBlocks.Count - 1
-                Dim tblock As block = sectionBlocks(sdx)
-                Dim tblock2 As block = sectionBlocks(sdx + 1)
-
-                Dim newJump As New instJumpBlock
-                newJump.opName = "JBL"
-                newJump.realAddress = getLastInst(tblock).realAddress + 1
-                newJump.jumpType = JumpBlockType.JMP
-                newJump.blockName = "SUB_" & tblock2.codeRange.rangeStart.ToString("X6")
-                tblock.addCodeBlock(newJump)
-                sdx += 1
-            End While
-
-
             'check for jump instructions across the blocks
             sdx = 0
             While sdx <= sectionBlocks.Count - 1
@@ -1478,9 +1496,7 @@ Module analyzer
                                     cdx = newIdx
                                     Dim oCnt As Integer = tblock.code.Count
                                     If newIdx < tblock.code.Count - 1 Then
-                                        handleBranchOutOfLoop(nBlock, tblock.code(newIdx + 1).realAddress, sectionBlocks)
-                                    Else
-                                        handleBranchOutOfLoop(nBlock, tblock.code(newIdx).realAddress + 1, sectionBlocks)
+                                        handleBranchOutOfLoop(nBlock.code(0), nBlock.codeRange.rangeStart, tblock.code(newIdx + 1).realAddress, sectionBlocks)
                                     End If
                                     'if this section is splitted, restart from beginning
                                     If oCnt <> tblock.code.Count Then
@@ -1506,7 +1522,7 @@ Module analyzer
                         Select Case tInst.type
                             Case InstructionType.JUMP
                                 Dim b As instJump = tInst
-                                If b.jumpToRealAddress < b.realAddress And b.jumpToRealAddress >= tblock.codeRange.rangeStart And b.jumpToRealAddress <= tblock.codeRange.rangeEnd Then
+                                If b.jumpToRealAddress < b.realAddress And b.jumpToRealAddress >= tblock.codeRange.rangeStart Then
                                     Dim nBlock As block = extractBranchLoopBlock(tblock, cdx - 1, b.jumpToRealAddress)
                                     'update the next address of the loop content to the jump instruction
                                     getLastInst(nBlock).nextAddress = b.nextAddress
@@ -1514,6 +1530,7 @@ Module analyzer
                                     tblock.code(newIdx) = nBlock
                                     cdx = newIdx
                                     If newIdx < tblock.code.Count - 1 Then
+                                        'more code after the loop
                                         'check for condition at the beginning or end of loop content
                                         Dim content As block = nBlock.code(0)
                                         If Not content.code(0).isBlock Then
@@ -1524,37 +1541,28 @@ Module analyzer
                                                     If ib.branchToAddress = tblock.code(newIdx + 1).realAddress Then
                                                         'while loop
                                                         ib.flagIsSet = Not ib.flagIsSet
-                                                        nBlock.code.Add(ib)
+                                                        nBlock.code.Insert(0, ib)
                                                         nBlock.realAddress = ib.realAddress
                                                         content.code.RemoveAt(0)
                                                     End If
                                             End Select
-                                        End If
-                                        If nBlock.code.Count = 1 Then
-                                            If Not content.code(content.code.Count - 1).isBlock Then
-                                                Dim ic As instruction = content.code(content.code.Count - 1)
-                                                Select Case ic.type
-                                                    Case InstructionType.BRANCH, InstructionType.COMPARE_BRANCH, InstructionType.LOAD_BRANCH
-                                                        Dim ib As instPBranch = ic
-                                                        If ib.branchToAddress = tblock.code(newIdx + 1).realAddress Then
-                                                            'do while loop
-                                                            ib.flagIsSet = Not ib.flagIsSet
-                                                            nBlock.code.Add(ib)
-                                                            nBlock.realAddress = ib.realAddress
-                                                            content.code.RemoveAt(content.code.Count - 1)
-                                                        End If
-                                                End Select
-                                            End If
                                         End If
                                     End If
 
                                     'identify infinite jump loop
                                     Dim oCnt As Integer = tblock.code.Count
                                     Dim hasExit As Boolean = False
-                                    If newIdx < tblock.code.Count - 1 Then
-                                        hasExit = handleBranchOutOfLoop(nBlock.code(0), tblock.code(newIdx + 1).realAddress, sectionBlocks)
+                                    Dim blockToCheck As block
+                                    If nBlock.code(0).isBlock Then
+                                        blockToCheck = nBlock.code(0)
                                     Else
-                                        hasExit = handleBranchOutOfLoop(nBlock.code(0), nBlock.codeRange.rangeEnd + 1, sectionBlocks)
+                                        blockToCheck = nBlock.code(1)
+                                    End If
+
+                                    If newIdx < tblock.code.Count - 1 Then
+                                        hasExit = handleBranchOutOfLoop(blockToCheck, nBlock.codeRange.rangeStart, tblock.code(newIdx + 1).realAddress, sectionBlocks)
+                                    Else
+                                        hasExit = handleBranchOutOfLoop(blockToCheck, nBlock.codeRange.rangeStart, nBlock.codeRange.rangeEnd + 1, sectionBlocks)
                                     End If
                                     If nBlock.code.Count = 1 And Not hasExit Then
                                         'check has rts
@@ -1579,19 +1587,11 @@ Module analyzer
                 sdx += 1
             End While
 
-            sdx = 0
-            While sdx <= sectionBlocks.Count - 1
-                Dim tblock As block = sectionBlocks(sdx)
-                handleBranchOutOfLoop(tblock, tblock.codeRange.rangeEnd, sectionBlocks)
-                sdx += 1
-            End While
-
-
             'convert forward branch to if block
             sdx = 0
             While sdx <= sectionBlocks.Count - 1
                 Dim tblock As block = sectionBlocks(sdx)
-                convertForwardBranch(tblock, sectionBlocks)
+                convertForwardBranch(tblock, sectionBlocks, tblock.codeRange.rangeEnd)
                 sdx += 1
             End While
 
@@ -1606,140 +1606,180 @@ Module analyzer
 
         Next
 
-
-
-        'merge blocks with single source address
-        'merge jumps first
-        Dim j As Integer = 0
-        While j < blocks.Count
-            Dim hasMerged As Boolean = False
-            Dim b As block = blocks(j)
-            If b.type = BlockType.SUBROUNTINE Then
-                'drill down to first instruction
-                Dim c As codeBlock = b.code(0)
-                Dim subB As block
-                Do Until Not c.isBlock
-                    subB = c
-                    c = subB.code(0)
-                Loop
-                Dim tInst As instruction = c
-                If tInst.backSource.Count = 1 Then
-                    'find out where it is called
-                    Dim k As Integer = 0
-                    While k < blocks.Count
-                        Dim callBlock As block
-                        Dim callIdx As Integer
-                        If findJBLInBlock(b.name, blocks(k), callBlock, callIdx) Then
-                            'check it is a jump
-                            Dim jInst As instJumpBlock = callBlock.code(callIdx)
-                            If jInst.jumpType = JumpBlockType.JMP Then
-                                'directly replace the jump
-                                callBlock.code.RemoveAt(callIdx)
-                                callBlock.code.InsertRange(callIdx, b.code)
-                                blocks.RemoveAt(j)
-                                hasMerged = True
-                            End If
-                        End If
-                        If hasMerged Then
-                            k = blocks.Count
-                        Else
-                            k += 1
-                        End If
-                    End While
-                End If
-
+        'sort blocks by start address
+        blocks.Sort(Function(a, b) a.codeRange.rangeStart.CompareTo(b.codeRange.rangeStart))
+        'add jump blocks to each block if the block does not return or loop back
+        sdx = 0
+        While sdx < blocks.Count - 1
+            Dim tblock As block = blocks(sdx)
+            Dim tblock2 As block = blocks(sdx + 1)
+            Dim lastCode As codeBlock = tblock.code(tblock.code.Count - 1)
+            Dim needsJump As Boolean = True
+            If lastCode.isBlock Then
+                Dim bloc As block = lastCode
+                Select Case bloc.type
+                    Case BlockType.IF_THEN_ELSE, BlockType.BRANCH_LOOP
+                        needsJump = True
+                    Case Else
+                        needsJump = False
+                End Select
+            Else
+                Dim tInst As instruction = lastCode
+                Select Case tInst.type
+                    Case InstructionType.JUMP, InstructionType.SUB_RETURN, InstructionType.JUMP_BLOCK
+                        needsJump = False
+                    Case Else
+                        needsJump = True
+                End Select
             End If
-            If Not hasMerged Then
-                j += 1
+            If needsJump And tblock2.type <> BlockType.INFINITE_LOOP Then
+                Dim newJump As New instJumpBlock
+                newJump.opName = "JBL"
+                newJump.realAddress = getLastInst(tblock).realAddress + 1
+                newJump.jumpType = JumpBlockType.JMP
+                newJump.blockName = "SUB_" & tblock2.codeRange.rangeStart.ToString("X6")
+                tblock.addCodeBlock(newJump)
             End If
+
+            sdx += 1
         End While
 
-        'merge sub call now
-        j = 0
-        While j < blocks.Count
-            Dim hasMerged As Boolean = False
-            Dim b As block = blocks(j)
-            If b.type = BlockType.SUBROUNTINE Then
-                'drill down to first instruction
-                Dim c As codeBlock = b.code(0)
-                Dim subB As block
-                Do Until Not c.isBlock
-                    subB = c
-                    c = subB.code(0)
-                Loop
-                Dim tInst As instruction = c
-                If tInst.backSource.Count = 1 Then
-                    'check only has 1 return
-                    Dim rCount As Integer = getReturnCount(b)
-                    Dim canMerge As Boolean = False
-                    If rCount = 1 Then
-                        'check return is normal and is at end of block
-                        c = b.code(b.code.Count - 1)
-                        Do Until Not c.isBlock
-                            subB = c
-                            c = subB.code(subB.code.Count - 1)
-                        Loop
-                        tInst = c
-                        If tInst.type = InstructionType.SUB_RETURN Then
-                            Dim tR As instSubReturn = tInst
-                            If tR.returnType = SubReturnType.NORMAL Then
-                                'find out where it is called
-                                Dim k As Integer = 0
-                                While k < blocks.Count
-                                    Dim callBlock As block
-                                    Dim callIdx As Integer
-                                    If findJBLInBlock(b.name, blocks(k), callBlock, callIdx) Then
-                                        'check it is a call
-                                        Dim jInst As instJumpBlock = callBlock.code(callIdx)
-                                        If jInst.jumpType = JumpBlockType.JSR Then
-                                            'remove the return first
-                                            b.code.RemoveAt(b.code.Count - 1)
-                                            'directly replace the call
-                                            callBlock.code.RemoveAt(callIdx)
-                                            callBlock.code.InsertRange(callIdx, b.code)
-                                            blocks.RemoveAt(j)
-                                            hasMerged = True
-                                            If hasMerged Then
-                                                k = blocks.Count
-                                            Else
-                                                k += 1
-                                            End If
-                                        End If
-                                    End If
-                                    If hasMerged Then
-                                        k = blocks.Count
-                                    Else
-                                        k += 1
-                                    End If
-                                End While
-                            End If
-                        End If
-                    End If
 
-                End If
-            End If
-            If Not hasMerged Then
-                j += 1
-            End If
-        End While
+        ''merge blocks with single source address
+        ''merge jumps first
+        'Dim j As Integer = 0
+        'While j < blocks.Count
+        '    Dim hasMerged As Boolean = False
+        '    Dim b As block = blocks(j)
+        '    If b.type = BlockType.SUBROUNTINE Then
+        '        'drill down to first instruction
+        '        Dim c As codeBlock = b.code(0)
+        '        Dim subB As block
+        '        Do Until Not c.isBlock
+        '            subB = c
+        '            c = subB.code(0)
+        '        Loop
+        '        Dim tInst As instruction = c
+        '        If tInst.backSource.Count = 1 Then
+        '            'find out where it is called
+        '            Dim k As Integer = 0
+        '            While k < blocks.Count
+        '                Dim callBlock As block
+        '                Dim callIdx As Integer
+        '                If findJBLInBlock(b.name, blocks(k), callBlock, callIdx) Then
+        '                    'check it is a jump
+        '                    Dim jInst As instJumpBlock = callBlock.code(callIdx)
+        '                    If jInst.jumpType = JumpBlockType.JMP Then
+        '                        'directly replace the jump
+        '                        callBlock.code.RemoveAt(callIdx)
+        '                        callBlock.code.InsertRange(callIdx, b.code)
+        '                        blocks.RemoveAt(j)
+        '                        hasMerged = True
+        '                    End If
+        '                End If
+        '                If hasMerged Then
+        '                    k = blocks.Count
+        '                Else
+        '                    k += 1
+        '                End If
+        '            End While
+        '        End If
+
+        '    End If
+        '    If Not hasMerged Then
+        '        j += 1
+        '    End If
+        'End While
+
+        ''merge sub call now
+        'j = 0
+        'While j < blocks.Count
+        '    Dim hasMerged As Boolean = False
+        '    Dim b As block = blocks(j)
+        '    If b.type = BlockType.SUBROUNTINE Then
+        '        'drill down to first instruction
+        '        Dim c As codeBlock = b.code(0)
+        '        Dim subB As block
+        '        Do Until Not c.isBlock
+        '            subB = c
+        '            c = subB.code(0)
+        '        Loop
+        '        Dim tInst As instruction = c
+        '        If tInst.backSource.Count = 1 Then
+        '            'check only has 1 return
+        '            Dim rCount As Integer = getReturnCount(b)
+        '            Dim canMerge As Boolean = False
+        '            If rCount = 1 Then
+        '                'check return is normal and is at end of block
+        '                c = b.code(b.code.Count - 1)
+        '                Do Until Not c.isBlock
+        '                    subB = c
+        '                    c = subB.code(subB.code.Count - 1)
+        '                Loop
+        '                tInst = c
+        '                If tInst.type = InstructionType.SUB_RETURN Then
+        '                    Dim tR As instSubReturn = tInst
+        '                    If tR.returnType = SubReturnType.NORMAL Then
+        '                        'find out where it is called
+        '                        Dim k As Integer = 0
+        '                        While k < blocks.Count
+        '                            Dim callBlock As block
+        '                            Dim callIdx As Integer
+        '                            If findJBLInBlock(b.name, blocks(k), callBlock, callIdx) Then
+        '                                'check it is a call
+        '                                Dim jInst As instJumpBlock = callBlock.code(callIdx)
+        '                                If jInst.jumpType = JumpBlockType.JSR Then
+        '                                    'remove the return first
+        '                                    b.code.RemoveAt(b.code.Count - 1)
+        '                                    'directly replace the call
+        '                                    callBlock.code.RemoveAt(callIdx)
+        '                                    callBlock.code.InsertRange(callIdx, b.code)
+        '                                    blocks.RemoveAt(j)
+        '                                    hasMerged = True
+        '                                    If hasMerged Then
+        '                                        k = blocks.Count
+        '                                    Else
+        '                                        k += 1
+        '                                    End If
+        '                                End If
+        '                            End If
+        '                            If hasMerged Then
+        '                                k = blocks.Count
+        '                            Else
+        '                                k += 1
+        '                            End If
+        '                        End While
+        '                    End If
+        '                End If
+        '            End If
+
+        '        End If
+        '    End If
+        '    If Not hasMerged Then
+        '        j += 1
+        '    End If
+        'End While
     End Sub
 
-    Private Sub convertForwardBranch(tblock As block, sectionBlocks As List(Of block))
-        Dim validRange As UInt32 = tblock.getNextAddress
-        If validRange = UInt32.MaxValue Then
-            validRange = tblock.codeRange.rangeEnd
-        End If
+    Private Sub convertForwardBranch(tblock As block, sectionBlocks As List(Of block), nextAddress As UInt32)
         Select Case tblock.type
             Case BlockType.BRANCH_LOOP
-                convertForwardBranch(tblock.code(0), sectionBlocks)
+                If tblock.code(0).isBlock Then
+                    convertForwardBranch(tblock.code(0), sectionBlocks, nextAddress)
+                Else
+                    convertForwardBranch(tblock.code(1), sectionBlocks, nextAddress)
+                End If
             Case BlockType.IF_THEN_ELSE
-                convertForwardBranch(tblock.code(1), sectionBlocks)
                 If tblock.code.Count > 2 Then
-                    convertForwardBranch(tblock.code(2), sectionBlocks)
+                    convertForwardBranch(tblock.code(1), sectionBlocks, tblock.code(2).realAddress)
+                    convertForwardBranch(tblock.code(2), sectionBlocks, nextAddress)
+                Else
+                    convertForwardBranch(tblock.code(1), sectionBlocks, nextAddress)
                 End If
             Case Else
                 Dim cdx As Integer = 0
                 Dim tInst As instruction
+                Dim nextInstAddress As UInt32
                 While cdx < tblock.code.Count
                     If Not tblock.code(cdx).isBlock Then
                         tInst = tblock.code(cdx)
@@ -1747,19 +1787,21 @@ Module analyzer
                             Case InstructionType.BRANCH, InstructionType.COMPARE_BRANCH, InstructionType.LOAD_BRANCH
                                 Dim b As instPBranch = tInst
                                 If b.branchToAddress > b.realAddress Then
-                                    If b.branchToAddress <= validRange Then
-                                        Dim nBlock As block = extractIfThenElseBlock(tblock, cdx + 1, b.branchToAddress)
+                                    If b.branchToAddress <= nextAddress Then
+                                        Dim nBlock As block = extractIfThenElseBlock(tblock, cdx + 1, b.branchToAddress, nextAddress, sectionBlocks)
                                         'reverse the condition to become the if condition
                                         b.flagIsSet = Not b.flagIsSet
                                         nBlock.code.Insert(0, b)
                                         nBlock.realAddress = b.realAddress
                                         tblock.code(cdx) = nBlock
-                                        convertForwardBranch(nBlock, sectionBlocks)
-                                        validRange = tblock.getNextAddress
-                                        If validRange = UInt32.MaxValue Then
-                                            validRange = tblock.codeRange.rangeEnd
+
+                                        If cdx < tblock.code.Count - 1 Then
+                                            nextInstAddress = tblock.code(cdx + 1).realAddress
+                                        Else
+                                            nextInstAddress = nextAddress
                                         End If
                                     Else
+                                        'shouldn't happen
                                         For ndx As Integer = 0 To sectionBlocks.Count - 1
                                             Dim cRange As addressRange = sectionBlocks(ndx).codeRange
                                             If b.branchToAddress >= cRange.rangeStart And b.branchToAddress <= cRange.rangeEnd Then
@@ -1772,19 +1814,16 @@ Module analyzer
                                                 tblock.code(cdx) = createIfJumpBlock(b)
                                             End If
                                         Next
-                                        validRange = tblock.getNextAddress
-                                        If validRange = UInt32.MaxValue Then
-                                            validRange = tblock.codeRange.rangeEnd
-                                        End If
                                     End If
                                 End If
                         End Select
                     Else
-                        convertForwardBranch(tblock.code(cdx), sectionBlocks)
-                        validRange = tblock.getNextAddress
-                        If validRange = UInt32.MaxValue Then
-                            validRange = tblock.codeRange.rangeEnd
+                        If cdx < tblock.code.Count - 1 Then
+                            nextInstAddress = tblock.code(cdx + 1).realAddress
+                        Else
+                            nextInstAddress = nextAddress
                         End If
+                        convertForwardBranch(tblock.code(cdx), sectionBlocks, nextInstAddress)
                     End If
                     cdx += 1
                 End While
@@ -1873,7 +1912,7 @@ Module analyzer
 
     End Sub
 
-    Private Function handleBranchOutOfLoop(b As block, nextAddress As UInt32, sectionBlocks As List(Of block)) As Boolean
+    Private Function handleBranchOutOfLoop(b As block, startAddress As UInt32, nextAddress As UInt32, sectionBlocks As List(Of block)) As Boolean
         Dim hasExit As Boolean = False
         For i As Integer = 0 To b.code.Count - 1
             If Not b.code(i).isBlock Then
@@ -1881,54 +1920,55 @@ Module analyzer
                 Select Case tInst.type
                     Case InstructionType.BRANCH, InstructionType.COMPARE_BRANCH, InstructionType.LOAD_BRANCH
                         Dim ib As instPBranch = tInst
-                        If ib.branchToAddress < b.codeRange.rangeStart Or ib.branchToAddress > nextAddress Then
-                            For ndx As Integer = 0 To sectionBlocks.Count - 1
-                                Dim cRange As addressRange = sectionBlocks(ndx).codeRange
-                                If ib.branchToAddress >= cRange.rangeStart And ib.branchToAddress <= cRange.rangeEnd Then
-                                    If ib.branchToAddress > cRange.rangeStart Then
-                                        'split the target block
-                                        Dim newBlock As block = splitBlock(sectionBlocks(ndx), ib.branchToAddress)
-                                        sectionBlocks.Add(newBlock)
+                        If ib.branchToAddress < startAddress Or ib.branchToAddress > nextAddress Then
+                            'do not change if it is structure condition
+                            If b.type <> BlockType.IF_THEN_ELSE And b.type <> BlockType.BRANCH_LOOP Then
+                                For ndx As Integer = 0 To sectionBlocks.Count - 1
+                                    Dim cRange As addressRange = sectionBlocks(ndx).codeRange
+                                    If ib.branchToAddress >= cRange.rangeStart And ib.branchToAddress <= cRange.rangeEnd Then
+                                        If ib.branchToAddress > cRange.rangeStart Then
+                                            'split the target block
+                                            Dim newBlock As block = splitBlock(sectionBlocks(ndx), ib.branchToAddress)
+                                            sectionBlocks.Add(newBlock)
+                                        End If
+                                        'Change to if block with a block jump to branch address
+                                        b.code(i) = createIfJumpBlock(ib)
                                     End If
-                                    'Change to if block with a block jump to branch address
-                                    b.code(i) = createIfJumpBlock(ib)
-                                End If
-                            Next
+                                Next
+                            End If
                             hasExit = True
                         ElseIf ib.branchToAddress = nextAddress Then
-                            'convert to if block with break
-                            Dim ifBlock As New block
-                            ifBlock.type = BlockType.IF_THEN_ELSE
-                            'add condition
-                            ifBlock.code.Add(ib)
-                            ifBlock.realAddress = ib.realAddress
-                            'add if part
-                            Dim ifPart As New block
-                            ifPart.type = BlockType.IF_BLOCK
-                            ifBlock.code.Add(ifPart)
-                            'add jump to if part
-                            Dim newJump As New instBreakLoop
-                            newJump.opName = "BREAK"
-                            newJump.realAddress = ib.realAddress + 1
-                            ifPart.addCodeBlock(newJump)
-                            ifPart.realAddress = newJump.realAddress
-                            b.code(i) = ifBlock
+                            'do not change if it is structure condition
+                            If b.type <> BlockType.IF_THEN_ELSE And b.type <> BlockType.BRANCH_LOOP Then
+                                'convert to if block with break
+                                Dim ifBlock As New block
+                                ifBlock.type = BlockType.IF_THEN_ELSE
+                                'add condition
+                                ifBlock.code.Add(ib)
+                                ifBlock.realAddress = ib.realAddress
+                                'add if part
+                                Dim ifPart As New block
+                                ifPart.type = BlockType.IF_BLOCK
+                                ifBlock.code.Add(ifPart)
+                                'add jump to if part
+                                Dim newJump As New instBreakLoop
+                                newJump.opName = "BREAK"
+                                newJump.realAddress = ib.realAddress + 1
+                                ifPart.addCodeBlock(newJump)
+                                ifPart.realAddress = newJump.realAddress
+                                b.code(i) = ifBlock
+                            End If
+                            hasExit = True
+                        End If
+                    Case InstructionType.JUMP_BLOCK
+                        Dim ib As instJumpBlock = tInst
+                        If ib.jumpType = JumpBlockType.JMP Then
                             hasExit = True
                         End If
                 End Select
             Else
                 Dim subBlock As block = b.code(i)
-                Select Case subBlock.type
-                    Case BlockType.BRANCH_LOOP
-                        hasExit = hasExit Or handleBranchOutOfLoop(subBlock.code(0), nextAddress, sectionBlocks)
-                    Case BlockType.IF_THEN_ELSE
-                        hasExit = hasExit Or handleBranchOutOfLoop(subBlock.code(1), nextAddress, sectionBlocks)
-                        If subBlock.code.Count > 2 Then
-                            hasExit = hasExit Or handleBranchOutOfLoop(subBlock.code(2), nextAddress, sectionBlocks)
-                        End If
-                    Case Else
-                        hasExit = hasExit Or handleBranchOutOfLoop(subBlock, nextAddress, sectionBlocks)
-                End Select
+                hasExit = hasExit Or handleBranchOutOfLoop(subBlock, startAddress, nextAddress, sectionBlocks)
             End If
         Next
         Return hasExit
@@ -1964,7 +2004,7 @@ Module analyzer
         Return newBlock
     End Function
 
-    Private Function extractIfThenElseBlock(b As block, fromIdx As Integer, address As UInt32) As block
+    Private Function extractIfThenElseBlock(b As block, fromIdx As Integer, address As UInt32, nextAddress As UInt32, sectionBlocks As List(Of block)) As block
         Dim newBlock As New block
         newBlock.type = BlockType.IF_THEN_ELSE
 
@@ -1996,6 +2036,8 @@ Module analyzer
                 hasWork = False
             End If
         End While
+        newBlock.realAddress = b1.realAddress
+
         'check if last code is a forward jump
         'convert:
         '  branch to block2
@@ -2012,7 +2054,10 @@ Module analyzer
                 Dim tInst2 As instruction = b1.code(lastInst)
                 If tInst2.type = InstructionType.JUMP Then
                     Dim ij As instJump = tInst2
-                    If ij.jumpToRealAddress > address And ij.jumpToRealAddress <= b.codeRange.rangeEnd Then
+                    If ij.jumpToRealAddress > address And ij.jumpToRealAddress <= nextAddress Then
+                        b1.code.RemoveAt(lastInst)
+                        convertForwardBranch(b1, sectionBlocks, address)
+
                         'fill block 2
                         hasWork = True
                         While hasWork
@@ -2023,6 +2068,9 @@ Module analyzer
                                     b2.realAddress = tInst.realAddress
                                 End If
                                 b.code.RemoveAt(fromIdx)
+                                If fromIdx >= b.code.Count Then
+                                    hasWork = False
+                                End If
                             Else
                                 hasWork = False
                             End If
@@ -2033,10 +2081,17 @@ Module analyzer
         End If
         If b2.code.Count > 0 Then
             getLastInst(b1).nextAddress = getLastInst(b2).nextAddress
+            newBlock.code.Add(b2)
+            If fromIdx < b.code.Count - 1 Then
+                convertForwardBranch(b2, sectionBlocks, b.code(fromIdx).realAddress)
+            Else
+                convertForwardBranch(b2, sectionBlocks, b2.codeRange.rangeEnd)
+            End If
+        Else
+            convertForwardBranch(b1, sectionBlocks, address)
         End If
         Return newBlock
     End Function
-
 
     Private Function splitBlock(b As block, address As UInt32) As block
         Dim newBlock As New block

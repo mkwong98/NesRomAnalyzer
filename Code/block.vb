@@ -263,10 +263,14 @@ Public Class block
                     s &= tabStr & "while(true){" & vbCrLf
                     s &= code(0).printToCode(tabStr)
                     s &= tabStr & "}" & vbCrLf
-                Else
+                ElseIf code(0).isBlock Then
                     s &= tabStr & "do{" & vbCrLf
                     s &= code(0).printToCode(tabStr)
                     s &= tabStr & "}" & vbCrLf & tabStr & "while(" & code(1).printToCode("") & ");" & vbCrLf
+                Else
+                    s &= tabStr & "while(" & code(0).printToCode("") & "){" & vbCrLf
+                    s &= code(1).printToCode(tabStr)
+                    s &= tabStr & "}" & vbCrLf
                 End If
 
             Case BlockType.IF_THEN_ELSE
