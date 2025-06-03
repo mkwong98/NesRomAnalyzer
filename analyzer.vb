@@ -1142,7 +1142,7 @@ Module analyzer
                 idx += 1
             Loop
 
-            If i.rangeStart < &H12DF And i.rangeEnd > &H12DF Then
+            If i.rangeStart <= &H1C69 And i.rangeEnd >= &H1C69 Then
                 Dim test As Boolean = True
             End If
 
@@ -1202,25 +1202,30 @@ Module analyzer
                                     Dim bIdx As Integer = findInstructionIndexInBlockOfInst(tblock, tBranch.branchToAddress, cdx + 1, tblock.code.Count - 1)
                                     If bIdx <> -1 Then
                                         tStruct.rangeEnd = tblock.code(bIdx - 1).realAddress
-                                        structureList.Add(tStruct)
 
                                         'check for possible else part
                                         Dim tI As instruction = tblock.code(bIdx - 1)
+                                        Dim tJump As instJump
+                                        Dim hasElse As Boolean = False
                                         'check for a forward jump
                                         If tI.type = InstructionType.JUMP Then
-                                            Dim tJump As instJump = tI
+                                            tJump = tI
                                             If Not tJump.isIndirect Then
                                                 If tJump.jumpToRealAddress > tJump.realAddress And tJump.jumpToRealAddress <= bRange.rangeEnd Then
-                                                    Dim tStruct2 As structRange
-                                                    tStruct2.type = BlockType.Else_BLOCK
-                                                    tStruct2.rangeStart = tBranch.branchToAddress
-                                                    tStruct2.nextAddress = tJump.jumpToRealAddress
-                                                    bIdx = findInstructionIndexInBlockOfInst(tblock, tJump.jumpToRealAddress, bIdx, tblock.code.Count - 1)
-                                                    If bIdx <> -1 Then
-                                                        tStruct2.rangeEnd = tblock.code(bIdx - 1).realAddress
-                                                        structureList.Add(tStruct2)
-                                                    End If
+                                                    hasElse = True
                                                 End If
+                                            End If
+                                        End If
+                                        structureList.Add(tStruct)
+                                        If hasElse Then
+                                            Dim tStruct2 As structRange
+                                            tStruct2.type = BlockType.Else_BLOCK
+                                            tStruct2.rangeStart = tBranch.branchToAddress
+                                            tStruct2.nextAddress = tJump.jumpToRealAddress
+                                            bIdx = findInstructionIndexInBlockOfInst(tblock, tJump.jumpToRealAddress, bIdx, tblock.code.Count - 1)
+                                            If bIdx <> -1 Then
+                                                tStruct2.rangeEnd = tblock.code(bIdx - 1).realAddress
+                                                structureList.Add(tStruct2)
                                             End If
                                         End If
                                     End If
@@ -1269,6 +1274,10 @@ Module analyzer
                                     xdx += 1
                                 End While
                             End If
+                            If tStruct.type = BlockType.LOOP_CONTENT And (tStruct2.type = BlockType.IF_BLOCK Or tStruct2.type = BlockType.Else_BLOCK) Then
+                                'cancel struct2
+                                structureList.RemoveAt(tdx)
+                            End If
                         ElseIf tStruct2.rangeStart <= tStruct.rangeStart And tStruct2.rangeEnd >= tStruct.rangeStart And tStruct2.rangeEnd < tStruct.rangeEnd Then
                             If tStruct2.type = BlockType.IF_BLOCK Or tStruct2.type = BlockType.Else_BLOCK Then
                                 'find the section and split
@@ -1298,6 +1307,38 @@ Module analyzer
                                     xdx += 1
                                 End While
                             End If
+                            If tStruct2.type = BlockType.LOOP_CONTENT And (tStruct.type = BlockType.IF_BLOCK Or tStruct.type = BlockType.Else_BLOCK) Then
+                                'cancel struct
+                                structureList.RemoveAt(sdx)
+                                sdx -= 1
+                                tdx -= 1
+                            End If
+                        End If
+                        tdx += 1
+                    End While
+                    sdx += 1
+                End While
+
+                'check for repeated else blocks 
+                sdx = 0
+                While sdx <= structureList.Count - 2
+                    Dim tStruct As structRange = structureList(sdx)
+                    Dim tdx = sdx + 1
+                    While tdx <= structureList.Count - 1
+                        Dim tStruct2 As structRange = structureList(tdx)
+                        If tStruct.type = BlockType.Else_BLOCK And tStruct2.type = BlockType.Else_BLOCK And tStruct.rangeStart = tStruct2.rangeStart Then
+                            'find the section and split
+                            Dim xdx As Integer = 0
+                            While xdx <= sectionBlocks.Count - 1
+                                Dim tblock As block = sectionBlocks(xdx)
+                                If tblock.codeRange.rangeStart < tStruct.rangeStart And tblock.codeRange.rangeEnd >= tStruct.rangeStart Then
+                                    'split this block
+                                    newBlock = splitBlock(tblock, tStruct.rangeStart)
+                                    sectionBlocks.Add(newBlock)
+                                    sectionAdded = True
+                                End If
+                                xdx += 1
+                            End While
                         End If
                         tdx += 1
                     End While
@@ -1317,6 +1358,7 @@ Module analyzer
                         Select Case tInst.type
                             Case InstructionType.JUMP
                                 Dim tJump As instJump = tInst
+
                                 For Each tStruct As structRange In structureList
                                     Select Case tStruct.type
                                         Case BlockType.LOOP_CONTENT
@@ -2016,7 +2058,7 @@ Module analyzer
 
         newBlock.addCodeBlock(b1)
 
-        Dim hasWork As Boolean = True
+        Dim hasWork As Boolean = fromIdx < b.code.Count
         Dim lastInst As Integer = -1
 
         'put code to block 1 until address is reached
@@ -2036,7 +2078,6 @@ Module analyzer
                 hasWork = False
             End If
         End While
-        newBlock.realAddress = b1.realAddress
 
         'check if last code is a forward jump
         'convert:
@@ -2080,7 +2121,9 @@ Module analyzer
             End If
         End If
         If b2.code.Count > 0 Then
-            getLastInst(b1).nextAddress = getLastInst(b2).nextAddress
+            If b1.code.Count > 0 Then
+                getLastInst(b1).nextAddress = getLastInst(b2).nextAddress
+            End If
             newBlock.code.Add(b2)
             If fromIdx < b.code.Count - 1 Then
                 convertForwardBranch(b2, sectionBlocks, b.code(fromIdx).realAddress)
