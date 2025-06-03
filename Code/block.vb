@@ -251,8 +251,10 @@ Public Class block
             Case BlockType.SUBROUNTINE
                 s &= "void game::" & name & "(){" & vbCrLf
                 s &= printContentToCode(tabStr)
+                If s.EndsWith("    return;" & vbCrLf) Then
+                    s = s.Remove(s.Length - Len("    return;" & vbCrLf), Len("    return;" & vbCrLf))
+                End If
                 s &= tabStr & "}" & vbCrLf & vbCrLf
-
             Case BlockType.INFINITE_LOOP
                 s &= "void game::repeat(){" & vbCrLf
                 s &= code(0).printToCode(tabStr)

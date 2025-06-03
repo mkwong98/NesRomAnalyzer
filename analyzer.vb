@@ -1686,122 +1686,123 @@ Module analyzer
             sdx += 1
         End While
 
+        'shortern calls with rts at the end
+        For Each c As block In blocks
+            If c.code.Count > 0 Then
+                If Not c.code(c.code.Count - 1).isBlock Then
+                    Dim tInst As instruction = c.code(c.code.Count - 1)
+                    If tInst.type = InstructionType.SUB_RETURN Then
+                        c.code.RemoveAt(c.code.Count - 1)
+                    End If
+                End If
+            End If
+        Next
 
-        ''merge blocks with single source address
-        ''merge jumps first
-        'Dim j As Integer = 0
-        'While j < blocks.Count
-        '    Dim hasMerged As Boolean = False
-        '    Dim b As block = blocks(j)
-        '    If b.type = BlockType.SUBROUNTINE Then
-        '        'drill down to first instruction
-        '        Dim c As codeBlock = b.code(0)
-        '        Dim subB As block
-        '        Do Until Not c.isBlock
-        '            subB = c
-        '            c = subB.code(0)
-        '        Loop
-        '        Dim tInst As instruction = c
-        '        If tInst.backSource.Count = 1 Then
-        '            'find out where it is called
-        '            Dim k As Integer = 0
-        '            While k < blocks.Count
-        '                Dim callBlock As block
-        '                Dim callIdx As Integer
-        '                If findJBLInBlock(b.name, blocks(k), callBlock, callIdx) Then
-        '                    'check it is a jump
-        '                    Dim jInst As instJumpBlock = callBlock.code(callIdx)
-        '                    If jInst.jumpType = JumpBlockType.JMP Then
-        '                        'directly replace the jump
-        '                        callBlock.code.RemoveAt(callIdx)
-        '                        callBlock.code.InsertRange(callIdx, b.code)
-        '                        blocks.RemoveAt(j)
-        '                        hasMerged = True
-        '                    End If
-        '                End If
-        '                If hasMerged Then
-        '                    k = blocks.Count
-        '                Else
-        '                    k += 1
-        '                End If
-        '            End While
-        '        End If
+        'merge blocks with single source address
+        Dim j As Integer = 0
+        While j < blocks.Count
+            Dim hasMerged As Boolean = False
+            Dim b As block = blocks(j)
+            If b.type = BlockType.SUBROUNTINE Then
+                Dim callCnt As Integer = 0
+                For Each c As codeBlock In b.code
+                    If c.isBlock Then
+                        callCnt += FindCallCnt(b.name, c)
+                    End If
+                Next
+                If callCnt = 1 Then
+                    'can merge
+                    'find out where it is called
+                    Dim k As Integer = 0
+                    While k < blocks.Count
+                        Dim callBlock As block
+                        Dim callIdx As Integer
+                        If findJBLInBlock(b.name, blocks(k), callBlock, callIdx) Then
+                            'check it is a jump
+                            Dim jInst As instJumpBlock = callBlock.code(callIdx)
+                            If jInst.jumpType = JumpBlockType.JMP Then
+                                'directly replace the jump
+                                callBlock.code.RemoveAt(callIdx)
+                                callBlock.code.InsertRange(callIdx, b.code)
+                                blocks.RemoveAt(j)
+                                hasMerged = True
+                            End If
+                        End If
+                        If hasMerged Then
+                            k = blocks.Count
+                        Else
+                            k += 1
+                        End If
+                    End While
 
-        '    End If
-        '    If Not hasMerged Then
-        '        j += 1
-        '    End If
-        'End While
+                End If
 
-        ''merge sub call now
-        'j = 0
-        'While j < blocks.Count
-        '    Dim hasMerged As Boolean = False
-        '    Dim b As block = blocks(j)
-        '    If b.type = BlockType.SUBROUNTINE Then
-        '        'drill down to first instruction
-        '        Dim c As codeBlock = b.code(0)
-        '        Dim subB As block
-        '        Do Until Not c.isBlock
-        '            subB = c
-        '            c = subB.code(0)
-        '        Loop
-        '        Dim tInst As instruction = c
-        '        If tInst.backSource.Count = 1 Then
-        '            'check only has 1 return
-        '            Dim rCount As Integer = getReturnCount(b)
-        '            Dim canMerge As Boolean = False
-        '            If rCount = 1 Then
-        '                'check return is normal and is at end of block
-        '                c = b.code(b.code.Count - 1)
-        '                Do Until Not c.isBlock
-        '                    subB = c
-        '                    c = subB.code(subB.code.Count - 1)
-        '                Loop
-        '                tInst = c
-        '                If tInst.type = InstructionType.SUB_RETURN Then
-        '                    Dim tR As instSubReturn = tInst
-        '                    If tR.returnType = SubReturnType.NORMAL Then
-        '                        'find out where it is called
-        '                        Dim k As Integer = 0
-        '                        While k < blocks.Count
-        '                            Dim callBlock As block
-        '                            Dim callIdx As Integer
-        '                            If findJBLInBlock(b.name, blocks(k), callBlock, callIdx) Then
-        '                                'check it is a call
-        '                                Dim jInst As instJumpBlock = callBlock.code(callIdx)
-        '                                If jInst.jumpType = JumpBlockType.JSR Then
-        '                                    'remove the return first
-        '                                    b.code.RemoveAt(b.code.Count - 1)
-        '                                    'directly replace the call
-        '                                    callBlock.code.RemoveAt(callIdx)
-        '                                    callBlock.code.InsertRange(callIdx, b.code)
-        '                                    blocks.RemoveAt(j)
-        '                                    hasMerged = True
-        '                                    If hasMerged Then
-        '                                        k = blocks.Count
-        '                                    Else
-        '                                        k += 1
-        '                                    End If
-        '                                End If
-        '                            End If
-        '                            If hasMerged Then
-        '                                k = blocks.Count
-        '                            Else
-        '                                k += 1
-        '                            End If
-        '                        End While
-        '                    End If
-        '                End If
-        '            End If
+            End If
+            If Not hasMerged Then
+                j += 1
+            End If
+        End While
 
-        '        End If
-        '    End If
-        '    If Not hasMerged Then
-        '        j += 1
-        '    End If
-        'End While
+        'merge blocks with single instruction
+        j = 0
+        While j < blocks.Count
+            Dim hasMerged As Boolean = False
+            Dim b As block = blocks(j)
+            If b.type = BlockType.SUBROUNTINE Then
+                If b.code.Count = 1 Then
+                    If Not b.code(0).isBlock Then
+                        For Each c As block In blocks
+                            replaceCall(b.name, c, b.code(0))
+                        Next
+                        blocks.RemoveAt(j)
+                        hasMerged = True
+                    End If
+                End If
+            End If
+            If Not hasMerged Then
+                j += 1
+            End If
+        End While
+
     End Sub
+
+    Private Function findCallCnt(name As String, c As codeBlock) As Integer
+        Dim cnt As Integer = 0
+        If c.isBlock Then
+            Dim tBlock As block = c
+            For Each subC As codeBlock In tBlock.code
+                cnt += findCallCnt(name, subC)
+            Next
+        Else
+            Dim tInst As instruction = c
+            If tInst.type = InstructionType.JUMP_BLOCK Then
+                Dim jInst As instJumpBlock = tInst
+                If jInst.blockName = name Then
+                    cnt += 1
+                End If
+            End If
+        End If
+        Return cnt
+    End Function
+
+    Private Sub replaceCall(name As String, c As block, i As instruction)
+        Dim cnt As Integer = 0
+        For j As Integer = 0 To c.code.Count - 1
+            If c.code(j).isBlock Then
+                replaceCall(name, c.code(j), i)
+            Else
+                Dim inst As instruction = c.code(j)
+                If inst.type = InstructionType.JUMP_BLOCK Then
+                    Dim jInst As instJumpBlock = inst
+                    If jInst.blockName = name Then
+                        'replace with the instruction
+                        c.code(j) = i
+                    End If
+                End If
+            End If
+        Next
+    End Sub
+
 
     Private Sub convertForwardBranch(tblock As block, sectionBlocks As List(Of block), nextAddress As UInt32)
         Select Case tblock.type
