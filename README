@@ -1,0 +1,20 @@
+This program reads a ROM file and convert the game code in PRG ROM to C++ code. The generated code can be added to a C++ project with emulated PPU and APU to compile a PC executable of the game. The executable still require the original ROM for CHR data and PRG data.
+
+Usage: Select a ROM file and press the "Process" button. This will generate some sort of disassembly. Move to the second tab, click the "Export" button to save the generated disasembly to a file. Press the "Analyze" button to convert the disassembly to C++ representation. Then move to the third tab and press the "Generate" button to generate C++ code and function headers. Copy the C++ code to the gameCode.cpp and headers to game.hpp of the specialized C++ project and compile the game. To restart directly at the analyze step, select the ROM file, press the "Load" button and pick the saved disassembly file. 
+
+The program breaks the code into sections by:
+1. Three vectors
+2. JSR
+3. JMP across sections
+
+Then the program runs the following steps:
+1. Identify loops.
+2. Resolve overlapping loops.
+3. Form the loop structures. 
+4. Identify breaks from loops.
+5. Identify infinite loops and cut infinite loops into separate sections. This happens at the end of reset vector in Donkey Kong.
+6. Identify if structures.
+7. Identify else block.
+8. Resolve overlapping if structures.
+9. Form the if structures.
+10. Replace any branch or jump instructions not belonging to a structure into a goto instruction.
