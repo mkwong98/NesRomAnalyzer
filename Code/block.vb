@@ -266,16 +266,29 @@ Public Class block
                     s &= code(0).printToCode(tabStr)
                     s &= tabStr & "}" & vbCrLf
                 ElseIf code(0).isBlock Then
-                    s &= tabStr & "do{" & vbCrLf
-                    s &= code(0).printToCode(tabStr)
-                    s &= tabStr & "}" & vbCrLf & tabStr & "while(" & code(1).printToCode("") & ");" & vbCrLf
+                    If CType(code(1), instruction).type = InstructionType.JUMP Then
+                        s &= tabStr & "while(true){" & vbCrLf
+                        s &= code(0).printToCode(tabStr)
+                        s &= CType(code(1), instruction).printLabel()
+                        s &= tabStr & "}" & vbCrLf
+                    Else
+                        s &= tabStr & "do{" & vbCrLf
+                        s &= code(0).printToCode(tabStr)
+                        s &= CType(code(1), instruction).printLabel()
+                        s &= tabStr & "}" & vbCrLf & tabStr & "while(" & code(1).printToCode("") & ");" & vbCrLf
+                    End If
                 Else
+                    s &= CType(code(0), instruction).printLabel()
                     s &= tabStr & "while(" & code(0).printToCode("") & "){" & vbCrLf
                     s &= code(1).printToCode(tabStr)
+                    If code.Count > 2 Then
+                        s &= CType(code(2), instruction).printLabel()
+                    End If
                     s &= tabStr & "}" & vbCrLf
                 End If
 
             Case BlockType.IF_THEN_ELSE
+                s &= CType(code(0), instruction).printLabel()
                 s &= tabStr & "if(" & code(0).printToCode("") & "){" & vbCrLf
                 s &= code(1).printToCode(tabStr)
                 s &= tabStr & "}" & vbCrLf

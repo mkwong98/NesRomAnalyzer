@@ -18,6 +18,6 @@
     End Function
 
     Public Overrides Function printToCode(tabStr As String) As String
-        Return tabStr & "break;" & vbCrLf
+        Return printLabel() & tabStr & "break;" & vbCrLf
     End Function
 End Class

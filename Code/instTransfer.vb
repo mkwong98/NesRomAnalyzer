@@ -40,9 +40,9 @@
         Select Case destination.addrMode
             Case AddressingMode.ZERO_PAGE, AddressingMode.ABSOLUTE, AddressingMode.ZERO_PAGE_INDEXED_X, AddressingMode.ZERO_PAGE_INDEXED_Y,
                 AddressingMode.ABSOLUTE_INDEXED_X, AddressingMode.ABSOLUTE_INDEXED_Y, AddressingMode.INDEXED_INDIRECT_X, AddressingMode.INDIRECT_INDEXED_Y
-                Return tabStr & printMemoryTargetToCode(destination, False) & printMemoryTargetToCode(source, True) & ");" & vbCrLf
+                Return printLabel() & tabStr & printMemoryTargetToCode(destination, False) & printMemoryTargetToCode(source, True) & ");" & vbCrLf
             Case Else
-                Return tabStr & printMemoryTargetToCode(destination, False) & " = " & printMemoryTargetToCode(source, True) & ";" & vbCrLf
+                Return printLabel() & tabStr & printMemoryTargetToCode(destination, False) & " = " & printMemoryTargetToCode(source, True) & ";" & vbCrLf
 
         End Select
     End Function

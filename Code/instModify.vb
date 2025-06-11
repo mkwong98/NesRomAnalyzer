@@ -48,14 +48,14 @@
         '"INC", "DEC", "INX", "DEX", "INY", "DEY", "ASL", "LSR", "ROL", "ROR"
         Select Case opName
             Case "INC", "DEC"
-                Return tabStr & "op" & opName & "(" & printMemoryTargetAsAddress(operand) & ", 1);" & vbCrLf
+                Return printLabel() & tabStr & "op" & opName & "(" & printMemoryTargetAsAddress(operand) & ", 1);" & vbCrLf
             Case "INX", "DEX", "INY", "DEY"
-                Return tabStr & "op" & opName & "(1);" & vbCrLf
+                Return printLabel() & tabStr & "op" & opName & "(1);" & vbCrLf
             Case Else
                 If operand.addrMode = AddressingMode.ACCUMULATOR Or operand.addrMode = AddressingMode.IMPLICIT Then
-                    Return tabStr & "op" & opName & "_A(1);" & vbCrLf
+                    Return printLabel() & tabStr & "op" & opName & "_A(1);" & vbCrLf
                 Else
-                    Return tabStr & "op" & opName & "_M(" & printMemoryTargetAsAddress(operand) & ", 1);" & vbCrLf
+                    Return printLabel() & tabStr & "op" & opName & "_M(" & printMemoryTargetAsAddress(operand) & ", 1);" & vbCrLf
                 End If
         End Select
     End Function

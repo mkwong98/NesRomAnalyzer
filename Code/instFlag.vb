@@ -72,7 +72,7 @@
     End Function
 
     Public Overrides Function printToCode(tabStr As String) As String
-        Dim s As String = tabStr
+        Dim s As String = printLabel() & tabStr
 
         Select Case updateFlag
             Case FlagID.c

@@ -45,6 +45,7 @@ Public MustInherit Class instruction
     Public regXReqAddress As UInt32 = UInt32.MaxValue
     Public regYReqAddress As UInt32 = UInt32.MaxValue
     Public nextAddress As UInt32 = UInt32.MaxValue
+    Public needLabel As Boolean = False
 
     Public Overrides Function isBlock() As Boolean
         Return False
@@ -270,5 +271,12 @@ Public MustInherit Class instruction
     Public Overrides Function printToCode(tabStr As String) As String
         Dim s As String = opName & vbCrLf
         Return s
+    End Function
+
+    Public Function printLabel() As String
+        If Not needLabel Then
+            Return ""
+        End If
+        Return "L_" & realAddressToHexStr(realAddress) & ":" & vbCrLf
     End Function
 End Class

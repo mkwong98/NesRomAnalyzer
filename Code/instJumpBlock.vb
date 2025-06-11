@@ -2,6 +2,7 @@
     JSR
     JMP
     BRK
+    JGT
 End Enum
 Public Class instJumpBlock
     Inherits instruction
@@ -23,6 +24,8 @@ Public Class instJumpBlock
                 jumpType = JumpBlockType.JMP
             Case "BRK"
                 jumpType = JumpBlockType.BRK
+            Case "JGT"
+                jumpType = JumpBlockType.JGT
         End Select
     End Sub
 
@@ -35,12 +38,14 @@ Public Class instJumpBlock
                 s &= "JMP"
             Case JumpBlockType.BRK
                 s &= "BRK"
+            Case JumpBlockType.JGT
+                s &= "JGT"
         End Select
         Return s
     End Function
 
     Public Overrides Function printToCode(tabStr As String) As String
-        Dim s As String = ""
+        Dim s As String = printLabel()
         Select Case jumpType
             Case JumpBlockType.JSR
                 'push pc to stack
@@ -63,6 +68,8 @@ Public Class instJumpBlock
                 s &= tabStr & "mStack.pop();" & vbCrLf
                 s &= tabStr & "popAddress();" & vbCrLf
 
+            Case JumpBlockType.JGT
+                s &= tabStr & "goto " & blockName & ";" & vbCrLf
         End Select
         Return s
     End Function

@@ -37,6 +37,6 @@ Public Class instSubReturn
     End Function
 
     Public Overrides Function printToCode(tabStr As String) As String
-        Return tabStr & "return;" & vbCrLf
+        Return printLabel() & tabStr & "return;" & vbCrLf
     End Function
 End Class

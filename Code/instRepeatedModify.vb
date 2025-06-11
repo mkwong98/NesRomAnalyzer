@@ -52,14 +52,14 @@
         Dim op As String = Mid(opName, 1, 3)
         Select Case op
             Case "INC", "DEC"
-                Return tabStr & "op" & op & "(" & printMemoryTargetAsAddress(operand) & ", " & repeatedTimes.ToString & ");" & vbCrLf
+                Return printLabel() & tabStr & "op" & op & "(" & printMemoryTargetAsAddress(operand) & ", " & repeatedTimes.ToString & ");" & vbCrLf
             Case "INX", "DEX", "INY", "DEY"
-                Return tabStr & "op" & op & "(" & repeatedTimes.ToString & ");" & vbCrLf
+                Return printLabel() & tabStr & "op" & op & "(" & repeatedTimes.ToString & ");" & vbCrLf
             Case Else
                 If operand.addrMode = AddressingMode.ACCUMULATOR Or operand.addrMode = AddressingMode.IMPLICIT Then
-                    Return tabStr & "op" & op & "_A(" & repeatedTimes.ToString & ");" & vbCrLf
+                    Return printLabel() & tabStr & "op" & op & "_A(" & repeatedTimes.ToString & ");" & vbCrLf
                 Else
-                    Return tabStr & "op" & op & "_M(" & printMemoryTargetAsAddress(operand) & ", " & repeatedTimes.ToString & ");" & vbCrLf
+                    Return printLabel() & tabStr & "op" & op & "_M(" & printMemoryTargetAsAddress(operand) & ", " & repeatedTimes.ToString & ");" & vbCrLf
                 End If
         End Select
     End Function

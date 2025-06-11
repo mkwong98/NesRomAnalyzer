@@ -49,6 +49,6 @@
     End Sub
 
     Public Overrides Function printToCode(tabStr As String) As String
-        Return tabStr & "op" & opName & "(" & printMemoryTargetToCode(operand, True) & ");" & vbCrLf
+        Return printLabel() & tabStr & "op" & opName & "(" & printMemoryTargetToCode(operand, True) & ");" & vbCrLf
     End Function
 End Class

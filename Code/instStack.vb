@@ -44,13 +44,13 @@
     Public Overrides Function printToCode(tabStr As String) As String
         If isPush Then
             If regToKeep = CpuRegister.a Then
-                Return tabStr & "mStack.push({false, a});" & vbCrLf
+                Return printLabel() & tabStr & "mStack.push({false, a});" & vbCrLf
             Else
-                Return tabStr & "pushStatus();" & vbCrLf
+                Return printLabel() & tabStr & "pushStatus();" & vbCrLf
             End If
 
         Else
-            Dim s As String = ""
+            Dim s As String = printLabel()
             If regToKeep = CpuRegister.a Then
                 s &= tabStr & "a = mStack.top().value;" & vbCrLf
             Else
