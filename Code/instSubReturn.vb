@@ -37,6 +37,11 @@ Public Class instSubReturn
     End Function
 
     Public Overrides Function printToCode(tabStr As String) As String
-        Return printLabel() & tabStr & "return;" & vbCrLf
+        Dim s As String = printLabel()
+        If Not restoreFlags Then
+            s &= tabStr & "popAddress();" & vbCrLf
+        End If
+        s &= tabStr & "return;" & vbCrLf
+        Return s
     End Function
 End Class

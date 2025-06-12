@@ -747,8 +747,12 @@ Module analyzer
             Dim b As block = pBlock.code(i)
             If b.code.Count = 0 Then
                 If pBlock.type = BlockType.IF_THEN_ELSE Then
-                    If i = 1 And pBlock.code.Count > 2 Then
-                        Return findIndexInBlock(pBlock, pAddress, i + 1, i2)
+                    If i = 1 Then
+                        If CType(pBlock.code(0), instruction).realAddress = pAddress Then
+                            Return 0
+                        ElseIf pBlock.code.Count > 2 Then
+                            Return findIndexInBlock(pBlock, pAddress, i + 1, i2)
+                        End If
                     ElseIf i = 2 Then
                         Return findIndexInBlock(pBlock, pAddress, i1, i - 1)
                     End If
@@ -1193,35 +1197,39 @@ Module analyzer
                     Case InstructionType.JUMP
                         Dim tJump As instJump = tInst
                         If tJump.jumpToRealAddress < tJump.realAddress And tJump.jumpToRealAddress >= i.rangeStart And Not tJump.isIndirect Then
-                            Dim tStruct As structRange
-                            tStruct.type = BlockType.LOOP_CONTENT
-                            tStruct.nextAddress = UInt32.MaxValue
-                            'add first inst
-                            Dim bIdx As Integer = findIndexInBlock(newBlock, tJump.jumpToRealAddress, 0, newBlock.code.Count - 1)
-                            If bIdx <> -1 Then
-                                tStruct.rangeStart = newBlock.code(bIdx).realAddress
-                                If bIdx < newBlock.code.Count - 1 Then
-                                    tStruct.nextAddress = newBlock.code(bIdx + 1).realAddress
+                            If Not tInst.isJumpTarget Then
+                                Dim tStruct As structRange
+                                tStruct.type = BlockType.LOOP_CONTENT
+                                tStruct.nextAddress = UInt32.MaxValue
+                                'add first inst
+                                Dim bIdx As Integer = findIndexInBlock(newBlock, tJump.jumpToRealAddress, 0, newBlock.code.Count - 1)
+                                If bIdx <> -1 Then
+                                    tStruct.rangeStart = newBlock.code(bIdx).realAddress
+                                    If bIdx < newBlock.code.Count - 1 Then
+                                        tStruct.nextAddress = newBlock.code(bIdx + 1).realAddress
+                                    End If
                                 End If
+                                tStruct.rangeEnd = tJump.realAddress
+                                structureList.Add(tStruct)
                             End If
-                            tStruct.rangeEnd = tJump.realAddress
-                            structureList.Add(tStruct)
                         End If
                     Case InstructionType.BRANCH, InstructionType.COMPARE_BRANCH, InstructionType.LOAD_BRANCH
                         Dim tBranch As instPBranch = tInst
                         If tBranch.branchToAddress < tBranch.realAddress And tBranch.branchToAddress >= i.rangeStart Then
-                            Dim tStruct As structRange
-                            tStruct.type = BlockType.BRANCH_LOOP
-                            'add first inst
-                            Dim bIdx As Integer = findIndexInBlock(newBlock, tBranch.branchToAddress, 0, newBlock.code.Count - 1)
-                            If bIdx <> -1 Then
-                                tStruct.rangeStart = newBlock.code(bIdx).realAddress
-                                If bIdx < newBlock.code.Count - 1 Then
-                                    tStruct.nextAddress = newBlock.code(bIdx + 1).realAddress
+                            If Not tInst.isJumpTarget Then
+                                Dim tStruct As structRange
+                                tStruct.type = BlockType.BRANCH_LOOP
+                                'add first inst
+                                Dim bIdx As Integer = findIndexInBlock(newBlock, tBranch.branchToAddress, 0, newBlock.code.Count - 1)
+                                If bIdx <> -1 Then
+                                    tStruct.rangeStart = newBlock.code(bIdx).realAddress
+                                    If bIdx < newBlock.code.Count - 1 Then
+                                        tStruct.nextAddress = newBlock.code(bIdx + 1).realAddress
+                                    End If
                                 End If
+                                tStruct.rangeEnd = tBranch.realAddress
+                                structureList.Add(tStruct)
                             End If
-                            tStruct.rangeEnd = tBranch.realAddress
-                            structureList.Add(tStruct)
                         End If
                 End Select
                 cdx += 1

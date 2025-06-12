@@ -42,8 +42,13 @@
                 AddressingMode.ABSOLUTE_INDEXED_X, AddressingMode.ABSOLUTE_INDEXED_Y, AddressingMode.INDEXED_INDIRECT_X, AddressingMode.INDIRECT_INDEXED_Y
                 Return printLabel() & tabStr & printMemoryTargetToCode(destination, False) & printMemoryTargetToCode(source, True) & ");" & vbCrLf
             Case Else
-                Return printLabel() & tabStr & printMemoryTargetToCode(destination, False) & " = " & printMemoryTargetToCode(source, True) & ";" & vbCrLf
-
+                Dim s As String = printLabel()
+                s &= tabStr & printMemoryTargetToCode(destination, False) & " = " & printMemoryTargetToCode(source, True) & ";" & vbCrLf
+                If destination.addrMode = AddressingMode.ACCUMULATOR _
+                    Or (destination.addrMode = AddressingMode.IMPLICIT And (destination.realAddress.ID = CpuRegister.a Or destination.realAddress.ID = CpuRegister.x Or destination.realAddress.ID = CpuRegister.y)) Then
+                    s &= tabStr & "setLoadFlag(" & printMemoryTargetToCode(destination, False) & ");" & vbCrLf
+                End If
+                Return s
         End Select
     End Function
 End Class

@@ -51,7 +51,6 @@ Public Class instJumpBlock
                 'push pc to stack
                 s &= tabStr & "pushAddress(0x" & realAddressToHexStr(realAddress) & ");" & vbCrLf
                 s &= tabStr & blockName & "();" & vbCrLf
-                s &= tabStr & "popAddress();" & vbCrLf
                 s &= tabStr & "if (poppedEntry.value != 0x" & realAddressToHexStr(realAddress) & ") return;" & vbCrLf
 
             Case JumpBlockType.JMP
