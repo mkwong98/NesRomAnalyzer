@@ -1184,10 +1184,6 @@ Module analyzer
                 idx += 1
             Loop
 
-            If i.rangeStart <= &H2471 And i.rangeEnd >= &H2471 Then
-                Dim test As Boolean = True
-            End If
-
             'find loops and check for conflicts
             Dim structureList As New List(Of structRange)
             Dim cdx As Integer = 0
@@ -1306,9 +1302,6 @@ Module analyzer
         'convert branches or jumps to other sections into subroutine calls
         'convert remaining branches and jumps to goto
         For Each c As block In blocks
-            If c.name = "SUB_000E7C" Then
-                Dim test As Boolean = True
-            End If
             convertBranchJumpSub(c, c, c.codeRange)
         Next
 
@@ -1331,7 +1324,12 @@ Module analyzer
             Else
                 Dim tInst As instruction = lastCode
                 Select Case tInst.type
-                    Case InstructionType.JUMP, InstructionType.SUB_RETURN, InstructionType.JUMP_BLOCK
+                    Case InstructionType.JUMP_BLOCK
+                        Dim jInst As instJumpBlock = tInst
+                        If jInst.jumpType <> JumpBlockType.JSR Then
+                            needsJump = False
+                        End If
+                    Case InstructionType.JUMP, InstructionType.SUB_RETURN
                         needsJump = False
                     Case Else
                         needsJump = True
@@ -1348,18 +1346,6 @@ Module analyzer
 
             sdx += 1
         End While
-
-        ''shortern calls with rts at the end
-        'For Each c As block In blocks
-        '    If c.code.Count > 0 Then
-        '        If Not c.code(c.code.Count - 1).isBlock Then
-        '            Dim tInst As instruction = c.code(c.code.Count - 1)
-        '            If tInst.type = InstructionType.SUB_RETURN Then
-        '                c.code.RemoveAt(c.code.Count - 1)
-        '            End If
-        '        End If
-        '    End If
-        'Next
 
         ''merge blocks with single source address
         'Dim j As Integer = 0
