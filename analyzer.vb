@@ -1126,7 +1126,7 @@ Module analyzer
                             .regAReqAddress = fullCode(i + repeatCount).regAReqAddress,
                             .regXReqAddress = fullCode(i + repeatCount).regXReqAddress,
                             .regYReqAddress = fullCode(i + repeatCount).regYReqAddress,
-                            .repeatedTimes = repeatCount
+                            .repeatedTimes = repeatCount + 1
                         }
                         newModify.backSource.AddRange(b.backSource)
                         newModify.subReturnAddresses.AddRange(b.subReturnAddresses)
