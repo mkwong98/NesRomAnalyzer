@@ -39,4 +39,10 @@
     Public Overrides Function saveInstructionContentToString() As String
         Return codeBlock.saveMemoryTargetToString(operand1) & ";" & codeBlock.saveMemoryTargetToString(operand2)
     End Function
+
+    Public Overrides Function printToCode(tabStr As String) As String
+        Dim s As String = printLabel()
+        s &= tabStr & "opCMP(" & printMemoryTargetToCode(operand1, True) & ", " & printMemoryTargetToCode(operand2, True) & ");" & vbCrLf
+        Return s
+    End Function
 End Class

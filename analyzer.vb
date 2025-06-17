@@ -388,7 +388,8 @@ Module analyzer
             End If
         Next
 
-        simplify()
+        'disable simplify for the time being
+        'simplify()
 
         'split into sections
         codeSections.Clear()
@@ -915,8 +916,8 @@ Module analyzer
                                 End If
                         End Select
                         Dim flagNotRequired As Boolean = False
-                        If b.flgZReqAddress = b2.realAddress Or b.flgZReqAddress = UInt32.MaxValue _
-                            Or b.flgNReqAddress = b2.realAddress Or b.flgNReqAddress = UInt32.MaxValue Then
+                        If (b.flgZReqAddress = b2.realAddress Or b.flgZReqAddress = UInt32.MaxValue) _
+                            And (b.flgNReqAddress = b2.realAddress Or b.flgNReqAddress = UInt32.MaxValue) Then
                             flagNotRequired = True
                         End If
 
@@ -987,58 +988,75 @@ Module analyzer
                 If fullCode(i).type = InstructionType.COMPARE And fullCode(i + 1).type = InstructionType.BRANCH And Not fullCode(i + 1).isJumpTarget Then
                     Dim b As instCompare = CType(fullCode(i), instCompare)
                     Dim b2 As instBranch = CType(fullCode(i + 1), instBranch)
-                    'can be combined
-                    Dim newBranch As New instCompareBranch With {
-                        .realAddress = b.realAddress,
-                        .operand1 = codeBlock.createCPURegisterMemoryTarget(b.operand1),
-                        .operand2 = b.operand2,
-                        .opName = b.opName & "+" & b2.opName,
-                        .branchToAddress = b2.branchToAddress,
-                        .useFlag = b2.useFlag,
-                        .flagIsSet = b2.flagIsSet,
-                        .isJumpTarget = b.isJumpTarget,
-                        .traceMarking = b.traceMarking
-                    }
-                    newBranch.backSource.AddRange(b.backSource)
-                    newBranch.subReturnAddresses.AddRange(b.subReturnAddresses)
-                    If b.flgCReqAddress <> b2.realAddress Then newBranch.flgCReqAddress = b.flgCReqAddress
-                    If b.flgZReqAddress <> b2.realAddress Then newBranch.flgZReqAddress = b.flgZReqAddress
-                    If b.flgNReqAddress <> b2.realAddress Then newBranch.flgNReqAddress = b.flgNReqAddress
-                    fullCode(i) = newBranch
-                    fullCode(i + 2).backSource.Add(b.realAddress)
-                    fullCode(i + 2).backSource.Remove(b2.realAddress)
-                    fullCode(findInstructionIndex(b2.branchToAddress, 0, fullCode.Count - 1)).backSource.Add(b.realAddress)
-                    fullCode(findInstructionIndex(b2.branchToAddress, 0, fullCode.Count - 1)).backSource.Remove(b2.realAddress)
-                    fullCode.RemoveAt(i + 1)
+
+                    Dim flagNotRequired As Boolean = False
+                    If b2.flgZReqAddress = UInt32.MaxValue And b2.flgNReqAddress = UInt32.MaxValue And b2.flgCReqAddress = UInt32.MaxValue Then
+                        flagNotRequired = True
+                    End If
+
+                    If flagNotRequired Then
+                        'can be combined
+                        Dim newBranch As New instCompareBranch With {
+                            .realAddress = b.realAddress,
+                            .operand1 = codeBlock.createCPURegisterMemoryTarget(b.operand1),
+                            .operand2 = b.operand2,
+                            .opName = b.opName & "+" & b2.opName,
+                            .branchToAddress = b2.branchToAddress,
+                            .useFlag = b2.useFlag,
+                            .flagIsSet = b2.flagIsSet,
+                            .isJumpTarget = b.isJumpTarget,
+                            .traceMarking = b.traceMarking
+                        }
+                        newBranch.backSource.AddRange(b.backSource)
+                        newBranch.subReturnAddresses.AddRange(b.subReturnAddresses)
+                        If b.flgCReqAddress <> b2.realAddress Then newBranch.flgCReqAddress = b.flgCReqAddress
+                        If b.flgZReqAddress <> b2.realAddress Then newBranch.flgZReqAddress = b.flgZReqAddress
+                        If b.flgNReqAddress <> b2.realAddress Then newBranch.flgNReqAddress = b.flgNReqAddress
+                        fullCode(i) = newBranch
+                        fullCode(i + 2).backSource.Add(b.realAddress)
+                        fullCode(i + 2).backSource.Remove(b2.realAddress)
+                        fullCode(findInstructionIndex(b2.branchToAddress, 0, fullCode.Count - 1)).backSource.Add(b.realAddress)
+                        fullCode(findInstructionIndex(b2.branchToAddress, 0, fullCode.Count - 1)).backSource.Remove(b2.realAddress)
+                        fullCode.RemoveAt(i + 1)
+                    End If
+
                 End If
 
                 'check for direct compare and branch instructions that can be combined
                 If fullCode(i).type = InstructionType.DIRECT_COMPARE And fullCode(i + 1).type = InstructionType.BRANCH And Not fullCode(i + 1).isJumpTarget Then
                     Dim b As instDirectCompare = CType(fullCode(i), instDirectCompare)
                     Dim b2 As instBranch = CType(fullCode(i + 1), instBranch)
-                    'can be combined
-                    Dim newBranch As New instCompareBranch With {
-                        .realAddress = b.realAddress,
-                        .operand1 = b.operand1,
-                        .operand2 = b.operand2,
-                        .opName = b.opName & "+" & b2.opName,
-                        .branchToAddress = b2.branchToAddress,
-                        .useFlag = b2.useFlag,
-                        .flagIsSet = b2.flagIsSet,
-                        .isJumpTarget = b.isJumpTarget,
-                        .traceMarking = b.traceMarking
-                    }
-                    newBranch.backSource.AddRange(b.backSource)
-                    newBranch.subReturnAddresses.AddRange(b.subReturnAddresses)
-                    If b.flgCReqAddress <> b2.realAddress Then newBranch.flgCReqAddress = b.flgCReqAddress
-                    If b.flgZReqAddress <> b2.realAddress Then newBranch.flgZReqAddress = b.flgZReqAddress
-                    If b.flgNReqAddress <> b2.realAddress Then newBranch.flgNReqAddress = b.flgNReqAddress
-                    fullCode(i) = newBranch
-                    fullCode(i + 2).backSource.Add(b.realAddress)
-                    fullCode(i + 2).backSource.Remove(b2.realAddress)
-                    fullCode(findInstructionIndex(b2.branchToAddress, 0, fullCode.Count - 1)).backSource.Add(b.realAddress)
-                    fullCode(findInstructionIndex(b2.branchToAddress, 0, fullCode.Count - 1)).backSource.Remove(b2.realAddress)
-                    fullCode.RemoveAt(i + 1)
+
+                    Dim flagNotRequired As Boolean = False
+                    If b2.flgZReqAddress = UInt32.MaxValue And b2.flgNReqAddress = UInt32.MaxValue And b2.flgCReqAddress = UInt32.MaxValue Then
+                        flagNotRequired = True
+                    End If
+                    If flagNotRequired Then
+                        'can be combined
+                        Dim newBranch As New instCompareBranch With {
+                            .realAddress = b.realAddress,
+                            .operand1 = b.operand1,
+                            .operand2 = b.operand2,
+                            .opName = b.opName & "+" & b2.opName,
+                            .branchToAddress = b2.branchToAddress,
+                            .useFlag = b2.useFlag,
+                            .flagIsSet = b2.flagIsSet,
+                            .isJumpTarget = b.isJumpTarget,
+                            .traceMarking = b.traceMarking
+                        }
+                        newBranch.backSource.AddRange(b.backSource)
+                        newBranch.subReturnAddresses.AddRange(b.subReturnAddresses)
+                        If b.flgCReqAddress <> b2.realAddress Then newBranch.flgCReqAddress = b.flgCReqAddress
+                        If b.flgZReqAddress <> b2.realAddress Then newBranch.flgZReqAddress = b.flgZReqAddress
+                        If b.flgNReqAddress <> b2.realAddress Then newBranch.flgNReqAddress = b.flgNReqAddress
+                        fullCode(i) = newBranch
+                        fullCode(i + 2).backSource.Add(b.realAddress)
+                        fullCode(i + 2).backSource.Remove(b2.realAddress)
+                        fullCode(findInstructionIndex(b2.branchToAddress, 0, fullCode.Count - 1)).backSource.Add(b.realAddress)
+                        fullCode(findInstructionIndex(b2.branchToAddress, 0, fullCode.Count - 1)).backSource.Remove(b2.realAddress)
+                        fullCode.RemoveAt(i + 1)
+                    End If
+
                 End If
 
                 'check for load and branch instructions that can be combined
@@ -1064,8 +1082,9 @@ Module analyzer
                                 End If
                         End Select
                         Dim flagNotRequired As Boolean = False
-                        If b.flgZReqAddress = b2.realAddress Or b.flgZReqAddress = UInt32.MaxValue _
-                            Or b.flgNReqAddress = b2.realAddress Or b.flgNReqAddress = UInt32.MaxValue Then
+                        If (b.flgZReqAddress = b2.realAddress Or b.flgZReqAddress = UInt32.MaxValue) _
+                            And (b.flgNReqAddress = b2.realAddress Or b.flgNReqAddress = UInt32.MaxValue) _
+                            And b2.flgZReqAddress = UInt32.MaxValue And b2.flgNReqAddress = UInt32.MaxValue Then
                             flagNotRequired = True
                         End If
 
