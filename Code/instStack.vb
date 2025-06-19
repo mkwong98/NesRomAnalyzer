@@ -52,8 +52,7 @@
         Else
             Dim s As String = printLabel()
             If regToKeep = CpuRegister.a Then
-                s &= tabStr & "a = mStack.top().value;" & vbCrLf
-                s &= tabStr & "mStack.pop();" & vbCrLf
+                s &= tabStr & "opPLA();" & vbCrLf
             Else
                 s &= tabStr & "popStatus();" & vbCrLf
             End If
