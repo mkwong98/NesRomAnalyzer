@@ -323,6 +323,9 @@ Module analyzer
             If p <> -1 Then
                 Dim tInst As instruction = fullCode(p)
                 tInst.isJumpTarget = True
+                If Not tInst.backSource.Contains(j.rangeStart) Then
+                    tInst.backSource.Add(j.rangeStart)
+                End If
             End If
         Next
 
@@ -356,6 +359,11 @@ Module analyzer
 
         'trace all required reg and flag changes
         For i As Integer = 1 To fullCode.Count - 1
+            If fullCode(i).realAddress = &H2AEC Then
+                Dim test As Boolean = True
+            End If
+
+
             frm.lblRemark.Text = i & " / " & fullCode.Count
 
             Dim flgC, flgZ, flgI, flgD, flgV, flgN As Boolean
@@ -882,79 +890,79 @@ Module analyzer
         For i As Integer = 0 To fullCode.Count - 1
             If i + 1 <= fullCode.Count - 1 Then
 
-                ''check for transfer instructions that can be combined
-                'If fullCode(i).type = InstructionType.TRANSFER And fullCode(i + 1).type = InstructionType.TRANSFER And Not fullCode(i + 1).isJumpTarget Then
-                '    Dim b As instTransfer = CType(fullCode(i), instTransfer)
-                '    Dim b2 As instTransfer = CType(fullCode(i + 1), instTransfer)
-                '    If b.destination.addrMode = AddressingMode.IMPLICIT And b2.source.addrMode = AddressingMode.IMPLICIT _
-                '        And b.destination.realAddress.Type = MemoryType.CPU_REG And b2.source.realAddress.Type = MemoryType.CPU_REG _
-                '        And b.destination.realAddress.ID = b2.source.realAddress.ID Then
-                '        'check if the transfer to register is overwritten before being used later
-                '        Dim regNotRequired As Boolean = False
-                '        Select Case b.destination.realAddress.ID
-                '            Case CpuRegister.a
-                '                If b.regAReqAddress.Count = 0 Then
-                '                    regNotRequired = True
-                '                ElseIf b.regAReqAddress.Count = 1 Then
-                '                    If b.regAReqAddress(0) = b2.realAddress Then
-                '                        regNotRequired = True
-                '                    End If
-                '                End If
-                '            Case CpuRegister.x
-                '                If b.regXReqAddress.Count = 0 Then
-                '                    regNotRequired = True
-                '                ElseIf b.regXReqAddress.Count = 1 Then
-                '                    If b.regXReqAddress(0) = b2.realAddress Then
-                '                        regNotRequired = True
-                '                    End If
-                '                End If
-                '            Case CpuRegister.y
-                '                If b.regYReqAddress.Count = 0 Then
-                '                    regNotRequired = True
-                '                ElseIf b.regYReqAddress.Count = 1 Then
-                '                    If b.regYReqAddress(0) = b2.realAddress Then
-                '                        regNotRequired = True
-                '                    End If
-                '                End If
-                '        End Select
-                '        Dim flagNotRequired As Boolean = False
-                '        If b2.flgZReqAddress.Count = 0 And b2.flgNReqAddress.Count = 0 Then
-                '            flagNotRequired = True
-                '        End If
+                'check for transfer instructions that can be combined
+                If fullCode(i).type = InstructionType.TRANSFER And fullCode(i + 1).type = InstructionType.TRANSFER And Not fullCode(i + 1).isJumpTarget Then
+                    Dim b As instTransfer = CType(fullCode(i), instTransfer)
+                    Dim b2 As instTransfer = CType(fullCode(i + 1), instTransfer)
+                    If b.destination.addrMode = AddressingMode.IMPLICIT And b2.source.addrMode = AddressingMode.IMPLICIT _
+                        And b.destination.realAddress.Type = MemoryType.CPU_REG And b2.source.realAddress.Type = MemoryType.CPU_REG _
+                        And b.destination.realAddress.ID = b2.source.realAddress.ID Then
+                        'check if the transfer to register is overwritten before being used later
+                        Dim regNotRequired As Boolean = False
+                        Select Case b.destination.realAddress.ID
+                            Case CpuRegister.a
+                                If b.regAReqAddress.Count = 0 Then
+                                    regNotRequired = True
+                                ElseIf b.regAReqAddress.Count = 1 Then
+                                    If b.regAReqAddress(0) = b2.realAddress Then
+                                        regNotRequired = True
+                                    End If
+                                End If
+                            Case CpuRegister.x
+                                If b.regXReqAddress.Count = 0 Then
+                                    regNotRequired = True
+                                ElseIf b.regXReqAddress.Count = 1 Then
+                                    If b.regXReqAddress(0) = b2.realAddress Then
+                                        regNotRequired = True
+                                    End If
+                                End If
+                            Case CpuRegister.y
+                                If b.regYReqAddress.Count = 0 Then
+                                    regNotRequired = True
+                                ElseIf b.regYReqAddress.Count = 1 Then
+                                    If b.regYReqAddress(0) = b2.realAddress Then
+                                        regNotRequired = True
+                                    End If
+                                End If
+                        End Select
+                        Dim flagNotRequired As Boolean = False
+                        If b2.flgZReqAddress.Count = 0 And b2.flgNReqAddress.Count = 0 Then
+                            flagNotRequired = True
+                        End If
 
-                '        If flagNotRequired And regNotRequired Then
-                '            'can be combined
-                '            b.destination.realAddress = b2.destination.realAddress
-                '            b.destination.addrMode = b2.destination.addrMode
-                '            b.destination.address = b2.destination.address
-                '            b.opName = b.opName & "+" & b2.opName
-                '            b2.flgCReqAddress.AddRange(b.flgCReqAddress)
-                '            b2.flgZReqAddress.AddRange(b.flgZReqAddress)
-                '            b2.flgNReqAddress.AddRange(b.flgNReqAddress)
-                '            b2.regAReqAddress.AddRange(b.regAReqAddress)
-                '            b2.regXReqAddress.AddRange(b.regXReqAddress)
-                '            b2.regYReqAddress.AddRange(b.regYReqAddress)
+                        If flagNotRequired And regNotRequired Then
+                            'can be combined
+                            b.destination.realAddress = b2.destination.realAddress
+                            b.destination.addrMode = b2.destination.addrMode
+                            b.destination.address = b2.destination.address
+                            b.opName = b.opName & "+" & b2.opName
+                            b2.flgCReqAddress.AddRange(b.flgCReqAddress)
+                            b2.flgZReqAddress.AddRange(b.flgZReqAddress)
+                            b2.flgNReqAddress.AddRange(b.flgNReqAddress)
+                            b2.regAReqAddress.AddRange(b.regAReqAddress)
+                            b2.regXReqAddress.AddRange(b.regXReqAddress)
+                            b2.regYReqAddress.AddRange(b.regYReqAddress)
 
-                '            b.flgCReqAddress.Clear()
-                '            b.flgZReqAddress.Clear()
-                '            b.flgNReqAddress.Clear()
-                '            b.regAReqAddress.Clear()
-                '            b.regXReqAddress.Clear()
-                '            b.regYReqAddress.Clear()
+                            b.flgCReqAddress.Clear()
+                            b.flgZReqAddress.Clear()
+                            b.flgNReqAddress.Clear()
+                            b.regAReqAddress.Clear()
+                            b.regXReqAddress.Clear()
+                            b.regYReqAddress.Clear()
 
-                '            b.flgCReqAddress.AddRange(b2.flgCReqAddress.Distinct)
-                '            b.flgZReqAddress.AddRange(b2.flgZReqAddress.Distinct)
-                '            b.flgNReqAddress.AddRange(b2.flgNReqAddress.Distinct)
-                '            b.regAReqAddress.AddRange(b2.regAReqAddress.Distinct)
-                '            b.regXReqAddress.AddRange(b2.regXReqAddress.Distinct)
-                '            b.regYReqAddress.AddRange(b2.regYReqAddress.Distinct)
+                            b.flgCReqAddress.AddRange(b2.flgCReqAddress.Distinct)
+                            b.flgZReqAddress.AddRange(b2.flgZReqAddress.Distinct)
+                            b.flgNReqAddress.AddRange(b2.flgNReqAddress.Distinct)
+                            b.regAReqAddress.AddRange(b2.regAReqAddress.Distinct)
+                            b.regXReqAddress.AddRange(b2.regXReqAddress.Distinct)
+                            b.regYReqAddress.AddRange(b2.regYReqAddress.Distinct)
 
-                '            fullCode(i + 2).backSource.Add(b.realAddress)
-                '            fullCode(i + 2).backSource.Remove(b2.realAddress)
-                '            fullCode.RemoveAt(i + 1)
-                '        End If
-                '    End If
-                'End If
+                            fullCode(i + 2).backSource.Add(b.realAddress)
+                            fullCode(i + 2).backSource.Remove(b2.realAddress)
+                            fullCode.RemoveAt(i + 1)
+                        End If
+                    End If
+                End If
 
                 'check for transfer and compare instructions that can be combined
                 If fullCode(i).type = InstructionType.TRANSFER And fullCode(i + 1).type = InstructionType.COMPARE And Not fullCode(i + 1).isJumpTarget Then
@@ -1087,76 +1095,76 @@ Module analyzer
 
                 End If
 
-                ''check for load and branch instructions that can be combined
-                'If fullCode(i).type = InstructionType.TRANSFER And fullCode(i + 1).type = InstructionType.BRANCH And Not fullCode(i + 1).isJumpTarget Then
-                '    Dim b As instTransfer = CType(fullCode(i), instTransfer)
-                '    Dim b2 As instBranch = CType(fullCode(i + 1), instBranch)
-                '    If b.destination.addrMode = AddressingMode.IMPLICIT And b.destination.realAddress.Type = MemoryType.CPU_REG Then
-                '        'check if the transfer to register is overwritten before being used later
-                '        'any flag changes are overwritten by the compare instruction
-                '        Dim regNotRequired As Boolean = False
-                '        Select Case b.destination.realAddress.ID
-                '            Case CpuRegister.a
-                '                If b.regAReqAddress.Count = 0 Then
-                '                    regNotRequired = True
-                '                ElseIf b.regAReqAddress.Count = 1 Then
-                '                    If b.regAReqAddress(0) = b2.realAddress Then
-                '                        regNotRequired = True
-                '                    End If
-                '                End If
-                '            Case CpuRegister.x
-                '                If b.regXReqAddress.Count = 0 Then
-                '                    regNotRequired = True
-                '                ElseIf b.regXReqAddress.Count = 1 Then
-                '                    If b.regXReqAddress(0) = b2.realAddress Then
-                '                        regNotRequired = True
-                '                    End If
-                '                End If
-                '            Case CpuRegister.y
-                '                If b.regYReqAddress.Count = 0 Then
-                '                    regNotRequired = True
-                '                ElseIf b.regYReqAddress.Count = 1 Then
-                '                    If b.regYReqAddress(0) = b2.realAddress Then
-                '                        regNotRequired = True
-                '                    End If
-                '                End If
-                '        End Select
+                'check for load and branch instructions that can be combined
+                If fullCode(i).type = InstructionType.TRANSFER And fullCode(i + 1).type = InstructionType.BRANCH And Not fullCode(i + 1).isJumpTarget Then
+                    Dim b As instTransfer = CType(fullCode(i), instTransfer)
+                    Dim b2 As instBranch = CType(fullCode(i + 1), instBranch)
+                    If b.destination.addrMode = AddressingMode.IMPLICIT And b.destination.realAddress.Type = MemoryType.CPU_REG Then
+                        'check if the transfer to register is overwritten before being used later
+                        'any flag changes are overwritten by the compare instruction
+                        Dim regNotRequired As Boolean = False
+                        Select Case b.destination.realAddress.ID
+                            Case CpuRegister.a
+                                If b.regAReqAddress.Count = 0 Then
+                                    regNotRequired = True
+                                ElseIf b.regAReqAddress.Count = 1 Then
+                                    If b.regAReqAddress(0) = b2.realAddress Then
+                                        regNotRequired = True
+                                    End If
+                                End If
+                            Case CpuRegister.x
+                                If b.regXReqAddress.Count = 0 Then
+                                    regNotRequired = True
+                                ElseIf b.regXReqAddress.Count = 1 Then
+                                    If b.regXReqAddress(0) = b2.realAddress Then
+                                        regNotRequired = True
+                                    End If
+                                End If
+                            Case CpuRegister.y
+                                If b.regYReqAddress.Count = 0 Then
+                                    regNotRequired = True
+                                ElseIf b.regYReqAddress.Count = 1 Then
+                                    If b.regYReqAddress(0) = b2.realAddress Then
+                                        regNotRequired = True
+                                    End If
+                                End If
+                        End Select
 
-                '        Dim flagNotRequired As Boolean = True
+                        Dim flagNotRequired As Boolean = True
 
-                '        If b2.flgZReqAddress.Count = 0 And b2.flgNReqAddress.Count = 0 Then
-                '            flagNotRequired = True
-                '        End If
+                        If b2.flgZReqAddress.Count = 0 And b2.flgNReqAddress.Count = 0 Then
+                            flagNotRequired = True
+                        End If
 
-                '        If flagNotRequired And regNotRequired Then
-                '            'can be combined
-                '            Dim newBranch As New instLoadBranch With {
-                '                .realAddress = b.realAddress,
-                '                .operand = b.source,
-                '                .opName = b.opName & "+" & b2.opName,
-                '                .branchToAddress = b2.branchToAddress,
-                '                .useFlag = b2.useFlag,
-                '                .flagIsSet = b2.flagIsSet,
-                '                .isJumpTarget = b.isJumpTarget,
-                '                .traceMarking = b.traceMarking
-                '            }
-                '            newBranch.backSource.AddRange(b.backSource)
-                '            newBranch.subReturnAddresses.AddRange(b.subReturnAddresses)
-                '            newBranch.flgCReqAddress.AddRange(b2.flgCReqAddress)
-                '            newBranch.flgZReqAddress.AddRange(b2.flgZReqAddress)
-                '            newBranch.flgNReqAddress.AddRange(b2.flgNReqAddress)
-                '            newBranch.regAReqAddress.AddRange(b2.regAReqAddress)
-                '            newBranch.regXReqAddress.AddRange(b2.regXReqAddress)
-                '            newBranch.regYReqAddress.AddRange(b2.regYReqAddress)
-                '            fullCode(i) = newBranch
-                '            fullCode(i + 2).backSource.Add(b.realAddress)
-                '            fullCode(i + 2).backSource.Remove(b2.realAddress)
-                '            fullCode(findInstructionIndex(b2.branchToAddress, 0, fullCode.Count - 1)).backSource.Add(b.realAddress)
-                '            fullCode(findInstructionIndex(b2.branchToAddress, 0, fullCode.Count - 1)).backSource.Remove(b2.realAddress)
-                '            fullCode.RemoveAt(i + 1)
-                '        End If
-                '    End If
-                'End If
+                        If flagNotRequired And regNotRequired Then
+                            'can be combined
+                            Dim newBranch As New instLoadBranch With {
+                                .realAddress = b.realAddress,
+                                .operand = b.source,
+                                .opName = b.opName & "+" & b2.opName,
+                                .branchToAddress = b2.branchToAddress,
+                                .useFlag = b2.useFlag,
+                                .flagIsSet = b2.flagIsSet,
+                                .isJumpTarget = b.isJumpTarget,
+                                .traceMarking = b.traceMarking
+                            }
+                            newBranch.backSource.AddRange(b.backSource)
+                            newBranch.subReturnAddresses.AddRange(b.subReturnAddresses)
+                            newBranch.flgCReqAddress.AddRange(b2.flgCReqAddress)
+                            newBranch.flgZReqAddress.AddRange(b2.flgZReqAddress)
+                            newBranch.flgNReqAddress.AddRange(b2.flgNReqAddress)
+                            newBranch.regAReqAddress.AddRange(b2.regAReqAddress)
+                            newBranch.regXReqAddress.AddRange(b2.regXReqAddress)
+                            newBranch.regYReqAddress.AddRange(b2.regYReqAddress)
+                            fullCode(i) = newBranch
+                            fullCode(i + 2).backSource.Add(b.realAddress)
+                            fullCode(i + 2).backSource.Remove(b2.realAddress)
+                            fullCode(findInstructionIndex(b2.branchToAddress, 0, fullCode.Count - 1)).backSource.Add(b.realAddress)
+                            fullCode(findInstructionIndex(b2.branchToAddress, 0, fullCode.Count - 1)).backSource.Remove(b2.realAddress)
+                            fullCode.RemoveAt(i + 1)
+                        End If
+                    End If
+                End If
 
                 'check for repeated modify instructions that can be combined
                 If fullCode(i).type = InstructionType.MODIFY Then
