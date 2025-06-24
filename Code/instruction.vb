@@ -35,15 +35,15 @@ Public MustInherit Class instruction
     Public traceMarking As String = ""
     Public backSource As List(Of UInt32) = New List(Of UInt32) 'List of source address that use this instruction as a target
     Public subReturnAddresses As List(Of UInt32) = New List(Of UInt32) 'List of subroutine return addresses
-    Public flgCReqAddress As UInt32 = UInt32.MaxValue
-    Public flgZReqAddress As UInt32 = UInt32.MaxValue
-    Public flgIReqAddress As UInt32 = UInt32.MaxValue
-    Public flgDReqAddress As UInt32 = UInt32.MaxValue
-    Public flgVReqAddress As UInt32 = UInt32.MaxValue
-    Public flgNReqAddress As UInt32 = UInt32.MaxValue
-    Public regAReqAddress As UInt32 = UInt32.MaxValue
-    Public regXReqAddress As UInt32 = UInt32.MaxValue
-    Public regYReqAddress As UInt32 = UInt32.MaxValue
+    Public flgCReqAddress As List(Of UInt32) = New List(Of UInt32)
+    Public flgZReqAddress As List(Of UInt32) = New List(Of UInt32)
+    Public flgIReqAddress As List(Of UInt32) = New List(Of UInt32)
+    Public flgDReqAddress As List(Of UInt32) = New List(Of UInt32)
+    Public flgVReqAddress As List(Of UInt32) = New List(Of UInt32)
+    Public flgNReqAddress As List(Of UInt32) = New List(Of UInt32)
+    Public regAReqAddress As List(Of UInt32) = New List(Of UInt32)
+    Public regXReqAddress As List(Of UInt32) = New List(Of UInt32)
+    Public regYReqAddress As List(Of UInt32) = New List(Of UInt32)
     Public nextAddress As UInt32 = UInt32.MaxValue
     Public needLabel As Boolean = False
 
