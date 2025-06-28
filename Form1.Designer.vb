@@ -29,6 +29,14 @@ Partial Class frmMain
         btnProcess = New Button()
         TabControl1 = New TabControl()
         TabPage1 = New TabPage()
+        btnRunIndirect = New Button()
+        btnRemoveTargetAddress = New Button()
+        btnAddTargetAddress = New Button()
+        cboTargetAddress = New ComboBox()
+        Label2 = New Label()
+        lsvIndirectJmp = New ListView()
+        ColumnHeader7 = New ColumnHeader()
+        ColumnHeader8 = New ColumnHeader()
         btnExportBasic = New Button()
         lsvOutput = New ListView()
         ColumnHeader1 = New ColumnHeader()
@@ -115,6 +123,12 @@ Partial Class frmMain
         ' 
         ' TabPage1
         ' 
+        TabPage1.Controls.Add(btnRunIndirect)
+        TabPage1.Controls.Add(btnRemoveTargetAddress)
+        TabPage1.Controls.Add(btnAddTargetAddress)
+        TabPage1.Controls.Add(cboTargetAddress)
+        TabPage1.Controls.Add(Label2)
+        TabPage1.Controls.Add(lsvIndirectJmp)
         TabPage1.Controls.Add(btnExportBasic)
         TabPage1.Controls.Add(lsvOutput)
         TabPage1.Location = New Point(4, 24)
@@ -124,6 +138,78 @@ Partial Class frmMain
         TabPage1.TabIndex = 0
         TabPage1.Text = "Basic disassembly"
         TabPage1.UseVisualStyleBackColor = True
+        ' 
+        ' btnRunIndirect
+        ' 
+        btnRunIndirect.Anchor = AnchorStyles.Bottom Or AnchorStyles.Right
+        btnRunIndirect.Location = New Point(837, 442)
+        btnRunIndirect.Name = "btnRunIndirect"
+        btnRunIndirect.Size = New Size(312, 27)
+        btnRunIndirect.TabIndex = 14
+        btnRunIndirect.Text = "Run indirect jump targets"
+        btnRunIndirect.UseVisualStyleBackColor = True
+        ' 
+        ' btnRemoveTargetAddress
+        ' 
+        btnRemoveTargetAddress.Anchor = AnchorStyles.Bottom Or AnchorStyles.Right
+        btnRemoveTargetAddress.Location = New Point(1048, 409)
+        btnRemoveTargetAddress.Name = "btnRemoveTargetAddress"
+        btnRemoveTargetAddress.Size = New Size(101, 27)
+        btnRemoveTargetAddress.TabIndex = 13
+        btnRemoveTargetAddress.Text = "Remove"
+        btnRemoveTargetAddress.UseVisualStyleBackColor = True
+        ' 
+        ' btnAddTargetAddress
+        ' 
+        btnAddTargetAddress.Anchor = AnchorStyles.Bottom Or AnchorStyles.Right
+        btnAddTargetAddress.Location = New Point(1049, 376)
+        btnAddTargetAddress.Name = "btnAddTargetAddress"
+        btnAddTargetAddress.Size = New Size(101, 27)
+        btnAddTargetAddress.TabIndex = 12
+        btnAddTargetAddress.Text = "Add"
+        btnAddTargetAddress.UseVisualStyleBackColor = True
+        ' 
+        ' cboTargetAddress
+        ' 
+        cboTargetAddress.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Right
+        cboTargetAddress.DropDownStyle = ComboBoxStyle.Simple
+        cboTargetAddress.FormattingEnabled = True
+        cboTargetAddress.Location = New Point(1049, 24)
+        cboTargetAddress.Name = "cboTargetAddress"
+        cboTargetAddress.Size = New Size(103, 346)
+        cboTargetAddress.TabIndex = 11
+        ' 
+        ' Label2
+        ' 
+        Label2.Anchor = AnchorStyles.Bottom Or AnchorStyles.Right
+        Label2.AutoSize = True
+        Label2.Location = New Point(1046, 6)
+        Label2.Name = "Label2"
+        Label2.Size = New Size(103, 15)
+        Label2.TabIndex = 10
+        Label2.Text = "Target addresses"
+        ' 
+        ' lsvIndirectJmp
+        ' 
+        lsvIndirectJmp.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Right
+        lsvIndirectJmp.Columns.AddRange(New ColumnHeader() {ColumnHeader7, ColumnHeader8})
+        lsvIndirectJmp.FullRowSelect = True
+        lsvIndirectJmp.Location = New Point(837, 6)
+        lsvIndirectJmp.Name = "lsvIndirectJmp"
+        lsvIndirectJmp.Size = New Size(206, 430)
+        lsvIndirectJmp.TabIndex = 8
+        lsvIndirectJmp.UseCompatibleStateImageBehavior = False
+        lsvIndirectJmp.View = View.Details
+        ' 
+        ' ColumnHeader7
+        ' 
+        ColumnHeader7.Text = "PRG ROM Address"
+        ColumnHeader7.Width = 100
+        ' 
+        ' ColumnHeader8
+        ' 
+        ColumnHeader8.Text = "RAM location"
+        ColumnHeader8.Width = 100
         ' 
         ' btnExportBasic
         ' 
@@ -141,7 +227,7 @@ Partial Class frmMain
         lsvOutput.Columns.AddRange(New ColumnHeader() {ColumnHeader1, ColumnHeader2, ColumnHeader3, ColumnHeader4, ColumnHeader5, ColumnHeader6, ColumnHeader12})
         lsvOutput.Location = New Point(6, 6)
         lsvOutput.Name = "lsvOutput"
-        lsvOutput.Size = New Size(1132, 469)
+        lsvOutput.Size = New Size(825, 469)
         lsvOutput.TabIndex = 5
         lsvOutput.UseCompatibleStateImageBehavior = False
         lsvOutput.View = View.Details
@@ -359,6 +445,7 @@ Partial Class frmMain
         Text = "Main"
         TabControl1.ResumeLayout(False)
         TabPage1.ResumeLayout(False)
+        TabPage1.PerformLayout()
         TabPage2.ResumeLayout(False)
         TabPage2.PerformLayout()
         TabPage3.ResumeLayout(False)
@@ -399,5 +486,13 @@ Partial Class frmMain
     Friend WithEvents txtCCode As TextBox
     Friend WithEvents btnGenerate As Button
     Friend WithEvents txtCHeader As TextBox
+    Friend WithEvents lsvIndirectJmp As ListView
+    Friend WithEvents ColumnHeader7 As ColumnHeader
+    Friend WithEvents ColumnHeader8 As ColumnHeader
+    Friend WithEvents Label2 As Label
+    Friend WithEvents btnAddTargetAddress As Button
+    Friend WithEvents cboTargetAddress As ComboBox
+    Friend WithEvents btnRemoveTargetAddress As Button
+    Friend WithEvents btnRunIndirect As Button
 
 End Class

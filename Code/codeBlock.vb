@@ -173,7 +173,7 @@ Public MustInherit Class codeBlock
             Case AddressingMode.ACCUMULATOR
                 s &= "a"
             Case AddressingMode.IMMEDIATE
-                s &= "0x" & t.realAddress.ID.ToString("X2")
+                s &= "0x" & byteToHexStr(t.realAddress.ID)
             Case AddressingMode.ZERO_PAGE, AddressingMode.ABSOLUTE, AddressingMode.ZERO_PAGE_INDEXED_X, AddressingMode.ZERO_PAGE_INDEXED_Y,
                 AddressingMode.ABSOLUTE_INDEXED_X, AddressingMode.ABSOLUTE_INDEXED_Y, AddressingMode.INDEXED_INDIRECT_X, AddressingMode.INDIRECT_INDEXED_Y
                 If isRead Then
@@ -189,19 +189,19 @@ Public MustInherit Class codeBlock
         Dim s As String = ""
         Select Case t.addrMode
             Case AddressingMode.ZERO_PAGE, AddressingMode.ABSOLUTE
-                s &= "0x" & t.address.ToString("X4")
+                s &= "0x" & addressToHexStr(t.address)
             Case AddressingMode.ZERO_PAGE_INDEXED_X
-                s &= "(" & "0x" & t.address.ToString("X4") & " + x) & 0x00ff"
+                s &= "(" & "0x" & addressToHexStr(t.address) & " + x) & 0x00ff"
             Case AddressingMode.ZERO_PAGE_INDEXED_Y
-                s &= "(" & "0x" & t.address.ToString("X4") & " + y) & 0x00ff)"
+                s &= "(" & "0x" & addressToHexStr(t.address) & " + y) & 0x00ff)"
             Case AddressingMode.ABSOLUTE_INDEXED_X
-                s &= "0x" & t.address.ToString("X4") & " + x"
+                s &= "0x" & addressToHexStr(t.address) & " + x"
             Case AddressingMode.ABSOLUTE_INDEXED_Y
-                s &= "0x" & t.address.ToString("X4") & " + y"
+                s &= "0x" & addressToHexStr(t.address) & " + y"
             Case AddressingMode.INDEXED_INDIRECT_X
-                s &= "myMapper->readCPU((0x" & t.address.ToString("X4") & " + x) & 0x00ff) + (myMapper->readCPU((0x" & t.address.ToString("X4") & " + x + 1) & 0x00ff) << 8)"
+                s &= "myMapper->readCPU((0x" & addressToHexStr(t.address) & " + x) & 0x00ff) + (myMapper->readCPU((0x" & addressToHexStr(t.address) & " + x + 1) & 0x00ff) << 8)"
             Case AddressingMode.INDIRECT_INDEXED_Y
-                s &= "myMapper->readCPU(0x" & t.address.ToString("X4") & ") + (myMapper->readCPU((0x" & t.address.ToString("X4") & " + 1) & 0x00ff) << 8) + y"
+                s &= "myMapper->readCPU(0x" & addressToHexStr(t.address) & ") + (myMapper->readCPU((0x" & addressToHexStr(t.address) & " + 1) & 0x00ff) << 8) + y"
         End Select
         Return s
     End Function

@@ -69,6 +69,7 @@ Module cpu
     Public opTable(255) As opInfo
 
     Private branchAddress As List(Of branchEvent)
+    Public indirectJmpList As List(Of instJump)
 
     Public Sub init()
         initOpTable()
@@ -79,6 +80,7 @@ Module cpu
         stackPointer.source.ID = CpuRegister.s
 
         branchAddress = New List(Of branchEvent)
+        indirectJmpList = New List(Of instJump)
     End Sub
 
     Public Sub powerOn()
@@ -214,8 +216,11 @@ Module cpu
                     tInst.isIndirect = False
                 Else
                     tInst.isIndirect = True
-
+                    tInst.jumpToAddress = tAddress
                     'unknown jump target, not sure how to handle yet
+                    'add to lsv
+                    indirectJmpList.Add(tInst)
+
                     stillRunning = False
                 End If
                 oInst = tInst
@@ -228,7 +233,6 @@ Module cpu
                 tInst.subAddress = readAsAddress(&HFFFE, PrgByteType.PEEK, 0)
                 tInst.subRealAddress = read(tInst.subAddress, PrgByteType.PEEK, 0).source.ID
                 oInst = tInst
-
             Case "LDA"
                 Dim tInst As New instTransfer
                 a = handleReadAddressMode(opTable(pOpCode.currentValue).mode, operand(0).currentValue, operand(1).currentValue, pOpCode.source, tRemarks, tInst.source)

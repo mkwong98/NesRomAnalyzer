@@ -20,6 +20,6 @@
     End Sub
 
     Public Overrides Function saveInstructionContentToString() As String
-        Return subRealAddress.ToString("X6") & ";" & subAddress.ToString("X4") & ";" & restoreFlags.ToString
+        Return realAddressToHexStr(subRealAddress) & ";" & addressToHexStr(subAddress) & ";" & restoreFlags.ToString
     End Function
 End Class

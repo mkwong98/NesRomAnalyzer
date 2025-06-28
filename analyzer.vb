@@ -1,11 +1,4 @@
-﻿Imports System.CodeDom
-Imports System.Collections.Specialized.BitVector32
-Imports System.Net
-Imports System.Runtime.InteropServices
-Imports System.Text.Json
-Imports System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar
-Imports System.Windows.Forms.VisualStyles.VisualStyleElement.TreeView
-Imports Microsoft.VisualBasic.Devices
+﻿
 
 Public Enum TaskType
     RESET
@@ -117,6 +110,7 @@ Module analyzer
         tasksToRun.Add(t)
 
         Dim i As ListViewItem
+
         While currentTask < tasksToRun.Count
             'set up
             t = tasksToRun(currentTask)
@@ -154,6 +148,82 @@ Module analyzer
             Application.DoEvents()
         End While
 
+        printAnaCode()
+
+        For Each inst As instJump In indirectJmpList
+            Dim hasItem As Boolean = False
+            For Each itx As ListViewItem In frmMain.lsvIndirectJmp.Items
+                If itx.Text = realAddressToHexStr(inst.realAddress) Then
+                    hasItem = True
+
+                End If
+            Next
+            If Not hasItem Then
+                Dim itx As ListViewItem = frmMain.lsvIndirectJmp.Items.Add(realAddressToHexStr(inst.realAddress))
+                itx.SubItems.Add(realAddressToHexStr(inst.jumpToAddress))
+                itx.SubItems.Add("")
+                itx.Selected = True
+            End If
+        Next
+
+        MsgBox("Basic steps completed")
+
+    End Sub
+
+    Public Sub startIndirect()
+        currentTask = tasksToRun.Count
+        Dim indirectCount As Integer = indirectJmpList.Count
+        For Each inst As instJump In indirectJmpList
+            For Each tAddress As UInt16 In inst.indirectJumpTargets
+                Dim tMemory As memoryByte = read(tAddress, PrgByteType.PEEK, 0)
+                addJSRTask(tAddress, tMemory.source.ID)
+
+            Next
+        Next
+
+        While currentTask < tasksToRun.Count
+            'set up
+            Dim t As taskToRun = tasksToRun(currentTask)
+            console.setUpForTask(t)
+            Dim i As ListViewItem = frm.lsvOutput.Items.Add("")
+            currentBlock = New block
+            currentBlock.name = t.name
+            lines.Add(currentBlock)
+            i.Text = "SUB"
+            currentBlock.type = BlockType.SUBROUNTINE
+            i.Text = i.Text & " " & Hex(t.realAddress)
+
+            tasksToRun(currentTask) = t
+            'start running
+            console.run()
+            i = frm.lsvOutput.Items.Add("END")
+            tasksToRun(currentTask) = t
+            currentTask += 1
+            Application.DoEvents()
+        End While
+
+        printAnaCode()
+
+        For i As Integer = indirectCount To indirectJmpList.Count - 1
+            Dim inst As instJump = indirectJmpList(i)
+            Dim hasItem As Boolean = False
+            For Each itx As ListViewItem In frmMain.lsvIndirectJmp.Items
+                If itx.Text = realAddressToHexStr(inst.realAddress) Then
+                    hasItem = True
+                End If
+            Next
+            If Not hasItem Then
+                Dim itx As ListViewItem = frmMain.lsvIndirectJmp.Items.Add(realAddressToHexStr(inst.realAddress))
+                itx.SubItems.Add(realAddressToHexStr(inst.jumpToAddress))
+                itx.SubItems.Add("")
+                itx.Selected = True
+            End If
+        Next
+
+        MsgBox("Indirect jump targets completed")
+    End Sub
+
+    Private Sub printAnaCode()
         frmMain.txtAnaCode.Text = ""
         For Each b As block In lines
             If b.code.Count > 0 Then
@@ -163,10 +233,9 @@ Module analyzer
                 End If
             End If
         Next
-
-        MsgBox("Basic steps completed")
-
     End Sub
+
+
 
     Public Sub addJSRTask(pAddress As UInt16, pRealAddress As UInt32)
         Dim t As taskToRun
@@ -175,7 +244,7 @@ Module analyzer
         t.address = pAddress
         t.realAddress = pRealAddress
         t.mapperConfig = getMapperConfig()
-        t.name = "SUB_" & t.realAddress.ToString("X6")
+        t.name = "SUB_" & realAddressToHexStr(t.realAddress)
         If Not taskIsDuplicate(t) Then
             tasksToRun.Add(t)
         End If
@@ -286,6 +355,7 @@ Module analyzer
 
         fullCode.Sort(New InstComparer)
         jumpLinks.Clear()
+        indirectJmpList.Clear()
 
         'trace the code again
         For Each i As instruction In fullCode
@@ -302,7 +372,13 @@ Module analyzer
                     Dim r As addressRange
                     r.rangeStart = b.realAddress
                     If b.isIndirect Then
-                        'not sure what to do yet
+                        For Each tAddress As UInt16 In b.indirectJumpTargets
+                            Dim mb As memoryByte = read(tAddress, PrgByteType.CODE_HEAD, b.realAddress)
+                            r.rangeEnd = mb.source.ID
+                            jumpLinks.Add(r)
+                            b.indirectJumpRealTargets.Add(r.rangeEnd)
+                        Next
+                        indirectJmpList.Add(b)
                     Else
                         r.rangeEnd = b.jumpToRealAddress
                         jumpLinks.Add(r)
@@ -406,16 +482,16 @@ Module analyzer
         codeSections.Add(section)
 
 
-        splitSection(UInt16.MaxValue, resetAddress)
-        splitSection(UInt16.MaxValue, nmiAddress)
+        splitSection(UInt32.MaxValue, resetAddress)
+        splitSection(UInt32.MaxValue, nmiAddress)
         If hasBrk And Not brkTraced Then
-            splitSection(UInt16.MaxValue, brkAddress)
+            splitSection(UInt32.MaxValue, brkAddress)
         End If
 
         For i As Integer = 0 To fullCode.Count - 1
             If fullCode(i).type = InstructionType.SUBROUTINE Then
                 Dim bi As instSubroutine = CType(fullCode(i), instSubroutine)
-                splitSection(UInt16.MaxValue, bi.subRealAddress)
+                splitSection(UInt32.MaxValue, bi.subRealAddress)
             End If
         Next
 
@@ -429,7 +505,13 @@ Module analyzer
                         sectionAdded = sectionAdded Or splitSection(b.realAddress, b.branchToAddress)
                     Case InstructionType.JUMP
                         Dim b As instJump = CType(fullCode(i), instJump)
-                        sectionAdded = sectionAdded Or splitSection(b.realAddress, b.jumpToRealAddress)
+                        If Not b.isIndirect Then
+                            sectionAdded = sectionAdded Or splitSection(b.realAddress, b.jumpToRealAddress)
+                        Else
+                            For Each tAddress As UInt32 In b.indirectJumpRealTargets
+                                sectionAdded = sectionAdded Or splitSection(UInt32.MaxValue, tAddress)
+                            Next
+                        End If
                 End Select
             Next
         End While
@@ -463,7 +545,11 @@ Module analyzer
                             s &= "  " & realAddressToHexStr(b.realAddress) & " BCH " & realAddressToHexStr(b.branchToAddress) & vbCrLf
                         Case InstructionType.JUMP
                             Dim b As instJump = CType(tInst, instJump)
-                            s &= "  " & realAddressToHexStr(b.realAddress) & " JMP " & realAddressToHexStr(b.jumpToRealAddress) & vbCrLf
+                            If Not b.isIndirect Then
+                                s &= "  " & realAddressToHexStr(b.realAddress) & " JMP " & realAddressToHexStr(b.jumpToRealAddress) & vbCrLf
+                            Else
+                                s &= "  " & realAddressToHexStr(b.realAddress) & " JMP " & b.getIndirectJumpTargetString & vbCrLf
+                            End If
                         Case InstructionType.SUBROUTINE
                             Dim b As instSubroutine = CType(tInst, instSubroutine)
                             s &= "  " & realAddressToHexStr(b.realAddress) & " JSR " & realAddressToHexStr(b.subRealAddress) & vbCrLf
@@ -490,7 +576,7 @@ Module analyzer
         frm.txtAnaCode4.Text = s
     End Sub
 
-    Public Function splitSection(sourceAddress As UInt16, jumpAddress As UInt16) As Boolean
+    Public Function splitSection(sourceAddress As UInt32, jumpAddress As UInt32) As Boolean
         Dim j As Integer = 0
         While j < codeSections.Count
             If codeSections(j).rangeStart < jumpAddress And codeSections(j).rangeEnd >= jumpAddress _
@@ -572,7 +658,7 @@ Module analyzer
             tInst = fullCode(p)
 
             Dim isNew As Boolean = tInst.traceMarking = ""
-            Dim traceName As String = t.name & "@" & backAddress.ToString("X6")
+            Dim traceName As String = t.name & "@" & realAddressToHexStr(backAddress)
             If Not tInst.traceMarking.Contains(traceName) Then
                 tInst.traceMarking &= traceName & " "
             Else
@@ -605,7 +691,14 @@ Module analyzer
                     Case InstructionType.JUMP
                         Dim b As instJump = CType(tInst, instJump)
                         If b.isIndirect Then
-                            'not sure what to do yet
+                            For Each tAddress As UInt32 In b.indirectJumpRealTargets
+                                addressPair = New traceSetting With {
+                                    .sourceAddress = b.realAddress,
+                                    .startAddress = tAddress
+                                }
+                                addressPair.stack.AddRange(ts.stack)
+                                furtherTraceAddresses.Add(addressPair)
+                            Next
                         Else
                             addressPair = New traceSetting With {
                                 .sourceAddress = b.realAddress,
@@ -622,7 +715,7 @@ Module analyzer
                         newTask.source = tInst.realAddress
                         newTask.stack.AddRange(ts.stack)
                         If Not b.restoreFlags Then
-                            newTask.name = "SUB_" & b.subRealAddress.ToString("X6")
+                            newTask.name = "SUB_" & realAddressToHexStr(b.subRealAddress)
                             newTask.type = TaskType.JSR
                         Else
                             newTask.name = "BRK"
@@ -665,27 +758,30 @@ Module analyzer
                             'pop flags from stack
                             ts.stack.RemoveAt(ts.stack.Count - 1)
                         End If
-                        Dim m As stackEntry
-                        m = ts.stack(ts.stack.Count - 1)
-                        ts.stack.RemoveAt(ts.stack.Count - 1)
-                        ts.stack.RemoveAt(ts.stack.Count - 1)
-                        If m.source.Type = MemoryType.CPU_REG And m.source.ID = CpuRegister.pc Then
-                            If m.name = t.name Then
-                                'return to the original code
-                                t.endWithReturn = True
-                                b.returnType = SubReturnType.NORMAL
-                            Else
-                                'return twice
-                                t.endWithSkip = True
-                                If b.returnType = SubReturnType.UNKNOWN Then
-                                    b.returnType = SubReturnType.SKIP_TO_PREVIOUS
+                        If ts.stack.Count > 1 Then
+                            Dim m As stackEntry
+                            m = ts.stack(ts.stack.Count - 1)
+                            ts.stack.RemoveAt(ts.stack.Count - 1)
+                            ts.stack.RemoveAt(ts.stack.Count - 1)
+                            If m.source.Type = MemoryType.CPU_REG And m.source.ID = CpuRegister.pc Then
+                                If m.name = t.name Then
+                                    'return to the original code
+                                    t.endWithReturn = True
+                                    b.returnType = SubReturnType.NORMAL
+                                Else
+                                    'return twice
+                                    t.endWithSkip = True
+                                    If b.returnType = SubReturnType.UNKNOWN Then
+                                        b.returnType = SubReturnType.SKIP_TO_PREVIOUS
+                                    End If
                                 End If
+                                t.rtsAddress.Add(b.realAddress)
+                            Else
+                                'indirect jump
+                                b.returnType = SubReturnType.INDIRECT_JUMP
                             End If
-                            t.rtsAddress.Add(b.realAddress)
-                        Else
-                            'indirect jump
-                            b.returnType = SubReturnType.INDIRECT_JUMP
                         End If
+
 
                         traceEnd = True
                     Case InstructionType.FLAG
@@ -718,7 +814,7 @@ Module analyzer
             Dim f As traceSetting = furtherTraceAddresses(i)
             Dim p2 As Integer = findInstructionIndex(f.startAddress, 0, fullCode.Count - 1)
             If p2 <> -1 Then
-                Dim traceName As String = t.name & "@" & f.sourceAddress.ToString("X6")
+                Dim traceName As String = t.name & "@" & realAddressToHexStr(f.sourceAddress)
                 Dim tInst2 As instruction = fullCode(p2)
                 If Not tInst2.traceMarking.Contains(traceName) Then
                     traceSection(t, f)
@@ -1239,7 +1335,7 @@ Module analyzer
                     newBlock.name = "BRK"
                 Case Else
                     newBlock.type = BlockType.SUBROUNTINE
-                    newBlock.name = "SUB_" & i.rangeStart.ToString("X6")
+                    newBlock.name = "SUB_" & realAddressToHexStr(i.rangeStart)
             End Select
             tInst = fullCode(idx)
             newBlock.realAddress = tInst.realAddress
@@ -1344,7 +1440,7 @@ Module analyzer
                         newBlock.code.RemoveAt(newBlock.code.Count() - 1)
                         Dim newLoop As New block With {
                             .type = BlockType.INFINITE_LOOP,
-                            .name = "INFINITE_LOOP_" & b.codeRange.rangeStart.ToString("X6"),
+                            .name = "INFINITE_LOOP_" & realAddressToHexStr(b.codeRange.rangeStart),
                             .realAddress = b.codeRange.rangeStart
                         }
                         newLoop.addCodeBlock(b.code(0))
@@ -1405,7 +1501,7 @@ Module analyzer
                 newJump.opName = "JBL"
                 newJump.realAddress = getLastInst(tblock).realAddress + 1
                 newJump.jumpType = JumpBlockType.JMP
-                newJump.blockName = "SUB_" & tblock2.codeRange.rangeStart.ToString("X6")
+                newJump.blockName = "SUB_" & realAddressToHexStr(tblock2.codeRange.rangeStart)
                 tblock.addCodeBlock(newJump)
             End If
 
@@ -1506,26 +1602,28 @@ Module analyzer
                     Case InstructionType.JUMP
                         Dim jInst As instJump = pBlock.code(sdx)
                         If pBlock.type <> BlockType.BRANCH_LOOP Then
-                            'this is not the loop back inst of a loop
-                            Dim newJump As New instJumpBlock
-                            newJump.opName = "JBL"
-                            newJump.realAddress = jInst.realAddress
-                            newJump.backSource.AddRange(jInst.backSource)
-                            newJump.subReturnAddresses.AddRange(jInst.subReturnAddresses)
-                            newJump.traceMarking = jInst.traceMarking
-                            newJump.isJumpTarget = jInst.isJumpTarget
-                            newJump.needLabel = jInst.needLabel
-                            If jInst.jumpToRealAddress < pRange.rangeStart Or jInst.jumpToRealAddress > pRange.rangeEnd Then
-                                'convert to jump block
-                                newJump.jumpType = JumpBlockType.JMP
-                                newJump.blockName = "SUB_" & jInst.jumpToRealAddress.ToString("X6")
-                            Else
-                                'convert to goto
-                                markLabel(pParentBlock, jInst.jumpToRealAddress)
-                                newJump.jumpType = JumpBlockType.JGT
-                                newJump.blockName = "L_" & jInst.jumpToRealAddress.ToString("X6")
+                            If Not jInst.isIndirect Then
+                                'this is not the loop back inst of a loop
+                                Dim newJump As New instJumpBlock
+                                newJump.opName = "JBL"
+                                newJump.realAddress = jInst.realAddress
+                                newJump.backSource.AddRange(jInst.backSource)
+                                newJump.subReturnAddresses.AddRange(jInst.subReturnAddresses)
+                                newJump.traceMarking = jInst.traceMarking
+                                newJump.isJumpTarget = jInst.isJumpTarget
+                                newJump.needLabel = jInst.needLabel
+                                If jInst.jumpToRealAddress < pRange.rangeStart Or jInst.jumpToRealAddress > pRange.rangeEnd Then
+                                    'convert to jump block
+                                    newJump.jumpType = JumpBlockType.JMP
+                                    newJump.blockName = "SUB_" & realAddressToHexStr(jInst.jumpToRealAddress)
+                                Else
+                                    'convert to goto
+                                    markLabel(pParentBlock, jInst.jumpToRealAddress)
+                                    newJump.jumpType = JumpBlockType.JGT
+                                    newJump.blockName = "L_" & realAddressToHexStr(jInst.jumpToRealAddress)
+                                End If
+                                pBlock.code(sdx) = newJump
                             End If
-                            pBlock.code(sdx) = newJump
                         End If
                     Case InstructionType.BRANCH, InstructionType.COMPARE_BRANCH, InstructionType.LOAD_BRANCH
                         Dim binst As instPBranch = pBlock.code(sdx)
@@ -1543,7 +1641,7 @@ Module analyzer
                         Dim bInst As instSubroutine = pBlock.code(sdx)
                         Dim i As New instJumpBlock
                         i.backSource.AddRange(bInst.backSource)
-                        i.blockName = "SUB_" & bInst.subRealAddress.ToString("X6")
+                        i.blockName = "SUB_" & realAddressToHexStr(bInst.subRealAddress)
                         i.isJumpTarget = bInst.isJumpTarget
                         If bInst.restoreFlags Then
                             i.jumpType = JumpBlockType.BRK
@@ -1933,6 +2031,12 @@ Module analyzer
                         Dim jInst As instJump = tInst
                         If jInst.jumpToRealAddress < pStruct.rangeStart Or jInst.jumpToRealAddress > pStruct.rangeEnd Then
                             Return True
+                        ElseIf jInst.isIndirect Then
+                            For Each tAddress As UInt32 In jInst.indirectJumpRealTargets
+                                If tAddress < pStruct.rangeStart Or tAddress > pStruct.rangeEnd Then
+                                    Return True
+                                End If
+                            Next
                         End If
                     Case InstructionType.SUB_RETURN
                         Return True
@@ -2066,7 +2170,7 @@ Module analyzer
             End If
         Loop
         If newBlock.code.Count > 0 Then
-            newBlock.name = "SUB_" & address.ToString("X6")
+            newBlock.name = "SUB_" & realAddressToHexStr(address)
         End If
         getLastInst(b).nextAddress = UInt32.MaxValue
 
@@ -2102,9 +2206,9 @@ Module analyzer
         newJump.opName = "JBL"
         newJump.realAddress = bInst.realAddress + 1
         If type = JumpBlockType.JGT Then
-            newJump.blockName = "L_" & bInst.branchToAddress.ToString("X6")
+            newJump.blockName = "L_" & realAddressToHexStr(bInst.branchToAddress)
         Else
-            newJump.blockName = "SUB_" & bInst.branchToAddress.ToString("X6")
+            newJump.blockName = "SUB_" & realAddressToHexStr(bInst.branchToAddress)
         End If
         ifPart.addCodeBlock(newJump)
         ifPart.realAddress = newJump.realAddress
@@ -2222,12 +2326,28 @@ Module analyzer
         For Each bl As block In blocks
             s &= bl.printToHeader
         Next
+        If indirectJmpList.Count > 0 Then
+            s &= "void indirectJump(Uint16 target);" & vbCrLf
+        End If
         frm.txtCHeader.Text = s
 
         s = ""
         For Each bl As block In blocks
             s &= bl.printToCode("")
         Next
+        If indirectJmpList.Count > 0 Then
+            s &= "void game::indirectJump(Uint16 target){" & vbCrLf
+            s &= "    switch(target){" & vbCrLf
+            For Each j As instJump In indirectJmpList
+                For i As Integer = 0 To j.indirectJumpTargets.Count - 1
+                    s &= "    case 0x" & addressToHexStr(j.indirectJumpTargets(i)) & ":" & vbCrLf
+                    s &= "        SUB_" & realAddressToHexStr(j.indirectJumpRealTargets(i)) & "();" & vbCrLf
+                    s &= "        break;" & vbCrLf
+                Next
+            Next
+            s &= "    }" & vbCrLf
+            s &= "}" & vbCrLf
+        End If
         frm.txtCCode.Text = s
     End Sub
 End Module

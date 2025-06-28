@@ -16,6 +16,8 @@ Public Class frmMain
         If ofdRomFile.ShowDialog = DialogResult.OK Then
             txtFilePath.Text = ofdRomFile.FileName
             fileRead = readRomFile(txtFilePath.Text)
+            lsvIndirectJmp.Items.Clear()
+
         End If
     End Sub
 
@@ -70,5 +72,53 @@ Public Class frmMain
 
     Private Sub btnGenerate_Click(sender As Object, e As EventArgs) Handles btnGenerate.Click
         generate()
+    End Sub
+
+    Private Sub lsvIndirectJmp_ItemSelectionChanged(sender As Object, e As ListViewItemSelectionChangedEventArgs) Handles lsvIndirectJmp.ItemSelectionChanged
+        If e.IsSelected Then
+            Dim addresses As String() = Split(e.Item.SubItems(2).Text, ",")
+            cboTargetAddress.Items.Clear()
+            cboTargetAddress.Items.AddRange(addresses)
+        End If
+    End Sub
+
+    Private Sub btnAddTargetAddress_Click(sender As Object, e As EventArgs) Handles btnAddTargetAddress.Click
+        If cboTargetAddress.Text <> "" Then
+            If cboTargetAddress.Items.Contains(cboTargetAddress.Text) Then
+                MsgBox("This target address is in the list")
+                Return
+            End If
+            cboTargetAddress.Items.Add(cboTargetAddress.Text)
+            updateIndirectJumpTarget()
+        End If
+    End Sub
+
+    Private Sub btnRemoveTargetAddress_Click(sender As Object, e As EventArgs) Handles btnRemoveTargetAddress.Click
+        If cboTargetAddress.Text <> "" Then
+            cboTargetAddress.Items.Remove(cboTargetAddress.Text)
+            updateIndirectJumpTarget()
+        End If
+    End Sub
+
+    Private Sub updateIndirectJumpTarget()
+        If lsvIndirectJmp.SelectedItems.Count = 0 Then Return
+        Dim itx = lsvIndirectJmp.SelectedItems(0)
+        Dim r As String = ""
+        For Each a As String In cboTargetAddress.Items
+            If r <> "" Then
+                r = r & ","
+            End If
+            r = r & a
+        Next
+        For Each i As instJump In indirectJmpList
+            If realAddressToHexStr(i.realAddress) = itx.Text Then
+                i.readIndirectJumpTargetString(r)
+                itx.SubItems(2).Text = r
+            End If
+        Next
+    End Sub
+
+    Private Sub btnRunIndirect_Click(sender As Object, e As EventArgs) Handles btnRunIndirect.Click
+        analyzer.startIndirect()
     End Sub
 End Class
