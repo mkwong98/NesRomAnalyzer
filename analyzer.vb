@@ -75,9 +75,9 @@ Module analyzer
     Private fullCode As New List(Of instruction)
     Private nmiAddress As UInt32
     Private resetAddress As UInt32
-    Private brkAddress As UInt32
+    Private brkAddress As UInt32 = UInt32.MaxValue
     Private hasBrk As Boolean = False
-    Private brkTraced As Boolean
+    Private brkTraced As Boolean = False
     Private traceTasksToRun As New List(Of traceTask)
     Private jumpLinks As New List(Of addressRange)
     Private tmpTracedAddress As New List(Of UInt32)
@@ -797,7 +797,7 @@ Module analyzer
                             m.source.Type = MemoryType.CPU_REG
                             m.name = t.name
                             ts.stack.Add(m)
-                        Else
+                        ElseIf ts.stack.Count > 0 Then
                             'pop from stack
                             ts.stack.RemoveAt(ts.stack.Count - 1)
                         End If
