@@ -60,11 +60,10 @@ Public Class instJumpBlock
             Case JumpBlockType.BRK
                 s &= tabStr & "pushAddress(0x" & realAddressToHexStr(realAddress) & ");" & vbCrLf
                 s &= tabStr & "flgB = true;" & vbCrLf
-                s &= tabStr & "mStack.push({false, getStatus()});" & vbCrLf
+                s &= tabStr & "pushStatus();" & vbCrLf
                 s &= tabStr & blockName & "();" & vbCrLf
-                s &= tabStr & "setStatus(mStack.top().value);" & vbCrLf
+                s &= tabStr & "popStatus();" & vbCrLf
                 s &= tabStr & "flgB = false;" & vbCrLf
-                s &= tabStr & "mStack.pop();" & vbCrLf
                 s &= tabStr & "popAddress();" & vbCrLf
 
             Case JumpBlockType.JGT
