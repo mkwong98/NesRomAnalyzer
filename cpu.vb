@@ -498,9 +498,13 @@ Module cpu
                 handleFlagUpdate(pOpCode.source, False, False, False, False, True, False)
                 tInst.setFlagChange(False, False, False, False, True, False)
                 oInst = tInst
+            Case "NOP"
+                Dim tInst As New instNOP
+                oInst = tInst
             Case Else
                 Dim tInst As New instNOP
                 oInst = tInst
+                stillRunning = False
         End Select
         oInst.realAddress = pOpCode.source.ID
         oInst.opName = opTable(pOpCode.currentValue).name
@@ -508,6 +512,11 @@ Module cpu
 
         logLineOfCode(pAddress, pOpCode.source.ID, pOpCode.currentValue, operand(0).currentValue, operand(1).currentValue, tRemarks, oInst)
 
+        If ((CInt(pc(1).currentValue) << 8 Or pc(0).currentValue) - &H8000 > getPrgROMSize()) _
+            Or (CInt(pc(1).currentValue) << 8 Or pc(0).currentValue) < &H8000 Then
+            'pc is out of range, stop execution
+            stillRunning = False
+        End If
         Return stillRunning
     End Function
 
