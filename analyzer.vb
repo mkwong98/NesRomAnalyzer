@@ -1,5 +1,7 @@
 ﻿
 
+Imports System.Net
+
 Public Enum TaskType
     RESET
     NMI
@@ -425,6 +427,10 @@ Module analyzer
         If hasBrk And Not brkTraced Then
             t = New traceTask
             t.name = "BRK"
+            If brkAddress = UInteger.MaxValue Then
+                'BRK not found, read from vector again
+                brkAddress = rom.readAddress(readAsAddress(&HFFFE, PrgByteType.INTERRUPT_VECTOR, 0), PrgByteType.INTERRUPT_VECTOR, 0).source.ID
+            End If
             t.realAddress = brkAddress
             t.type = TaskType.BRK
             t.source = UInt32.MaxValue
@@ -435,11 +441,6 @@ Module analyzer
 
         'trace all required reg and flag changes
         For i As Integer = 1 To fullCode.Count - 1
-            If fullCode(i).realAddress = &H2AEC Then
-                Dim test As Boolean = True
-            End If
-
-
             frm.lblRemark.Text = i & " / " & fullCode.Count
 
             Dim flgC, flgZ, flgI, flgD, flgV, flgN As Boolean
@@ -654,6 +655,8 @@ Module analyzer
         Dim skipNextBackAddress As Boolean = False
         Dim backAddress As UInt32 = ts.sourceAddress
         Dim addressPair As traceSetting
+        Dim hasBranchWithStackChange As Boolean = False
+        Dim branchTargets As New List(Of UInt32)
         Do Until traceEnd
             tInst = fullCode(p)
 
@@ -671,6 +674,9 @@ Module analyzer
                     tInst.backSource.Add(backAddress)
                 End If
             End If
+            If branchTargets.Contains(tInst.realAddress) Then
+                branchTargets.Remove(tInst.realAddress)
+            End If
 
             If Not traceEnd Then
                 Select Case tInst.type
@@ -687,6 +693,7 @@ Module analyzer
                             }
                             addressPair.stack.AddRange(ts.stack)
                             furtherTraceAddresses.Add(addressPair)
+                            branchTargets.Add(b.branchToAddress)
                         End If
                     Case InstructionType.JUMP
                         Dim b As instJump = CType(tInst, instJump)
@@ -763,7 +770,11 @@ Module analyzer
                             m = ts.stack(ts.stack.Count - 1)
                             ts.stack.RemoveAt(ts.stack.Count - 1)
                             ts.stack.RemoveAt(ts.stack.Count - 1)
-                            If m.source.Type = MemoryType.CPU_REG And m.source.ID = CpuRegister.pc Then
+                            If hasBranchWithStackChange Then
+                                'return to the original code
+                                t.endWithReturn = True
+                                b.returnType = SubReturnType.NORMAL
+                            ElseIf m.source.Type = MemoryType.CPU_REG And m.source.ID = CpuRegister.pc Then
                                 If m.name = t.name Then
                                     'return to the original code
                                     t.endWithReturn = True
@@ -771,19 +782,19 @@ Module analyzer
                                 Else
                                     'return twice
                                     t.endWithSkip = True
-                                    If b.returnType = SubReturnType.UNKNOWN Then
-                                        b.returnType = SubReturnType.SKIP_TO_PREVIOUS
+                                        If b.returnType = SubReturnType.UNKNOWN Then
+                                            b.returnType = SubReturnType.SKIP_TO_PREVIOUS
+                                        End If
                                     End If
+                                    t.rtsAddress.Add(b.realAddress)
+                                Else
+                                    'indirect jump
+                                    b.returnType = SubReturnType.INDIRECT_JUMP
                                 End If
-                                t.rtsAddress.Add(b.realAddress)
-                            Else
-                                'indirect jump
-                                b.returnType = SubReturnType.INDIRECT_JUMP
                             End If
-                        End If
 
 
-                        traceEnd = True
+                            traceEnd = True
                     Case InstructionType.FLAG
                         Dim b As instFlag = CType(tInst, instFlag)
                         If b.updateFlag = FlagID.i Then
@@ -801,6 +812,9 @@ Module analyzer
                             'pop from stack
                             ts.stack.RemoveAt(ts.stack.Count - 1)
                         End If
+                        If branchTargets.Count > 0 Then
+                            hasBranchWithStackChange = True
+                        End If
                 End Select
 
                 p += 1
@@ -808,6 +822,8 @@ Module analyzer
             End If
 
         Loop
+
+
 
         'trace the further addresses
         For i As Integer = 0 To furtherTraceAddresses.Count - 1
@@ -997,28 +1013,16 @@ Module analyzer
                         Dim regNotRequired As Boolean = False
                         Select Case b.destination.realAddress.ID
                             Case CpuRegister.a
-                                If b.regAReqAddress.Count = 0 Then
+                                If b2.regAReqAddress.Count = 0 Then
                                     regNotRequired = True
-                                ElseIf b.regAReqAddress.Count = 1 Then
-                                    If b.regAReqAddress(0) = b2.realAddress Then
-                                        regNotRequired = True
-                                    End If
                                 End If
                             Case CpuRegister.x
-                                If b.regXReqAddress.Count = 0 Then
+                                If b2.regXReqAddress.Count = 0 Then
                                     regNotRequired = True
-                                ElseIf b.regXReqAddress.Count = 1 Then
-                                    If b.regXReqAddress(0) = b2.realAddress Then
-                                        regNotRequired = True
-                                    End If
                                 End If
                             Case CpuRegister.y
-                                If b.regYReqAddress.Count = 0 Then
+                                If b2.regYReqAddress.Count = 0 Then
                                     regNotRequired = True
-                                ElseIf b.regYReqAddress.Count = 1 Then
-                                    If b.regYReqAddress(0) = b2.realAddress Then
-                                        regNotRequired = True
-                                    End If
                                 End If
                         End Select
                         Dim flagNotRequired As Boolean = False
@@ -1071,15 +1075,15 @@ Module analyzer
                         Dim regNotRequired As Boolean = False
                         Select Case b.destination.realAddress.ID
                             Case CpuRegister.a
-                                If b.regAReqAddress.Count = 0 Then
+                                If b2.regAReqAddress.Count = 0 Then
                                     regNotRequired = True
                                 End If
                             Case CpuRegister.x
-                                If b.regXReqAddress.Count = 0 Then
+                                If b2.regXReqAddress.Count = 0 Then
                                     regNotRequired = True
                                 End If
                             Case CpuRegister.y
-                                If b.regYReqAddress.Count = 0 Then
+                                If b2.regYReqAddress.Count = 0 Then
                                     regNotRequired = True
                                 End If
                         End Select
@@ -1201,28 +1205,16 @@ Module analyzer
                         Dim regNotRequired As Boolean = False
                         Select Case b.destination.realAddress.ID
                             Case CpuRegister.a
-                                If b.regAReqAddress.Count = 0 Then
+                                If b2.regAReqAddress.Count = 0 Then
                                     regNotRequired = True
-                                ElseIf b.regAReqAddress.Count = 1 Then
-                                    If b.regAReqAddress(0) = b2.realAddress Then
-                                        regNotRequired = True
-                                    End If
                                 End If
                             Case CpuRegister.x
-                                If b.regXReqAddress.Count = 0 Then
+                                If b2.regXReqAddress.Count = 0 Then
                                     regNotRequired = True
-                                ElseIf b.regXReqAddress.Count = 1 Then
-                                    If b.regXReqAddress(0) = b2.realAddress Then
-                                        regNotRequired = True
-                                    End If
                                 End If
                             Case CpuRegister.y
-                                If b.regYReqAddress.Count = 0 Then
+                                If b2.regYReqAddress.Count = 0 Then
                                     regNotRequired = True
-                                ElseIf b.regYReqAddress.Count = 1 Then
-                                    If b.regYReqAddress(0) = b2.realAddress Then
-                                        regNotRequired = True
-                                    End If
                                 End If
                         End Select
 

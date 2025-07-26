@@ -430,10 +430,10 @@ Module cpu
                 End Select
                 'calculate branch address
                 tAddress = CInt(pc(1).currentValue) << 8 Or pc(0).currentValue
-                tAddress += operand(0).currentValue
                 If operand(0).currentValue > &H7F Then
                     tAddress -= &H100
                 End If
+                tAddress += operand(0).currentValue
                 tMemory = read(tAddress, PrgByteType.PEEK, 0)
                 If Not tMemory.known Then
                     Dim b As branchEvent
@@ -478,6 +478,10 @@ Module cpu
                 tInst.setFlagChange(True, False, False, False, False, False)
                 oInst = tInst
             Case "CLI", "SEI"
+                If opTable(pOpCode.currentValue).name = "SEI" Then
+                    addBRKTask(pOpCode.source)
+                End If
+
                 Dim tInst As New instFlag
                 tInst.setUpdateFlag(FlagID.i)
                 tInst.isClear = opTable(pOpCode.currentValue).name = "CLI"
@@ -512,11 +516,11 @@ Module cpu
 
         logLineOfCode(pAddress, pOpCode.source.ID, pOpCode.currentValue, operand(0).currentValue, operand(1).currentValue, tRemarks, oInst)
 
-        If ((CInt(pc(1).currentValue) << 8 Or pc(0).currentValue) - &H8000 > getPrgROMSize()) _
-            Or (CInt(pc(1).currentValue) << 8 Or pc(0).currentValue) < &H8000 Then
-            'pc is out of range, stop execution
-            stillRunning = False
-        End If
+        'If ((CInt(pc(1).currentValue) << 8 Or pc(0).currentValue) - &H8000 > getPrgROMSize()) _
+        '    Or (CInt(pc(1).currentValue) << 8 Or pc(0).currentValue) < &H8000 Then
+        '    'pc is out of range, stop execution
+        '    stillRunning = False
+        'End If
         Return stillRunning
     End Function
 

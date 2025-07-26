@@ -59,4 +59,29 @@
             Return s
         End If
     End Function
+
+    Public Overrides Sub getRequiredFlags(ByRef c As Boolean, ByRef z As Boolean, ByRef i As Boolean, ByRef d As Boolean, ByRef v As Boolean, ByRef n As Boolean)
+        If regToKeep = CpuRegister.p Then
+            c = True
+            z = True
+            i = True
+            d = True
+            v = True
+            n = True
+        Else
+            c = False
+            z = False
+            i = False
+            d = False
+            v = False
+            n = False
+        End If
+
+    End Sub
+
+    Public Overrides Function getRequiredMemoryTarget() As List(Of memoryTarget)
+        Dim l As New List(Of memoryTarget)
+        l.Add(createCPURegisterMemoryTarget(regToKeep))
+        Return l
+    End Function
 End Class

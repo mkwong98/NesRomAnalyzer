@@ -23,6 +23,12 @@
             Case AddressingMode.ABSOLUTE_INDEXED_Y, AddressingMode.INDIRECT_INDEXED_Y, AddressingMode.ZERO_PAGE_INDEXED_Y
                 l.Add(createCPURegisterMemoryTarget(CpuRegister.y))
         End Select
+        Select Case destination.addrMode
+            Case AddressingMode.ABSOLUTE_INDEXED_X, AddressingMode.INDEXED_INDIRECT_X, AddressingMode.ZERO_PAGE_INDEXED_X
+                l.Add(createCPURegisterMemoryTarget(CpuRegister.x))
+            Case AddressingMode.ABSOLUTE_INDEXED_Y, AddressingMode.INDIRECT_INDEXED_Y, AddressingMode.ZERO_PAGE_INDEXED_Y
+                l.Add(createCPURegisterMemoryTarget(CpuRegister.y))
+        End Select
         Return l
     End Function
 
