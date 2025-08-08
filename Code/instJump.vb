@@ -16,7 +16,9 @@
         jumpToRealAddress = Convert.ToUInt32(s(0), 16)
         jumpToAddress = Convert.ToUInt16(s(1), 16)
         isIndirect = CBool(s(2))
-        readIndirectJumpTargetString(s(3))
+        If s.Length > 3 Then
+            readIndirectJumpTargetString(s(3))
+        End If
     End Sub
 
     Public Overrides Function getRequiredMemoryTarget() As List(Of memoryTarget)
