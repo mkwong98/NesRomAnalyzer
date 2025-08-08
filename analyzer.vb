@@ -86,9 +86,27 @@ Module analyzer
     Private codeSections As New List(Of addressRange)
     Private blocks As New List(Of block)
 
+    Public Sub reset()
+        tasksToRun.Clear()
+        lines.Clear()
+        currentTask = 0
+        fullCode.Clear()
+        brkAddress = UInt32.MaxValue
+        hasBrk = False
+        brkTraced = False
+        traceTasksToRun.Clear()
+        jumpLinks.Clear()
+        tmpTracedAddress.Clear()
+        codeSections.Clear()
+        blocks.Clear()
+    End Sub
 
 
     Public Sub start()
+        If lines.Count > 0 Then
+            'clear previous data
+            reset()
+        End If
 
         console.init()
 
