@@ -111,19 +111,6 @@ Module analyzer
         t.name = "NMI"
         tasksToRun.Add(t)
 
-        If frm.txtIndirectAddress.Text > "" Then
-            Dim tx() As String = Split(frm.txtIndirectAddress.Text, ",")
-            For Each a As String In tx
-                If a <> "" Then
-                    addJSRTask(Convert.ToUInt16(a, 16), UInteger.MaxValue)
-                End If
-            Next
-
-        End If
-
-
-
-
         Dim i As ListViewItem
 
         While currentTask < tasksToRun.Count
@@ -156,7 +143,7 @@ Module analyzer
 
             tasksToRun(currentTask) = t
             'start running
-            console.run()
+            console.run(frm.txtIndirectAddress.Text)
             i = frm.lsvOutput.Items.Add("END")
             tasksToRun(currentTask) = t
             currentTask += 1
@@ -181,6 +168,8 @@ Module analyzer
             End If
         Next
 
+        startIndirect()
+
         MsgBox("Basic steps completed")
 
     End Sub
@@ -192,7 +181,6 @@ Module analyzer
             For Each tAddress As UInt16 In inst.indirectJumpTargets
                 Dim tMemory As memoryByte = read(tAddress, PrgByteType.PEEK, 0)
                 addJSRTask(tAddress, tMemory.source.ID)
-
             Next
         Next
 
@@ -210,7 +198,7 @@ Module analyzer
 
             tasksToRun(currentTask) = t
             'start running
-            console.run()
+            console.run("")
             i = frm.lsvOutput.Items.Add("END")
             tasksToRun(currentTask) = t
             currentTask += 1

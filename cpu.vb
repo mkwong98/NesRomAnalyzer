@@ -70,6 +70,9 @@ Module cpu
 
     Private branchAddress As List(Of branchEvent)
     Public indirectJmpList As List(Of instJump)
+    Private hasIndirectJmp As Boolean
+    Private presetIndirectJmpAddr As String
+
 
     Public Sub init()
         initOpTable()
@@ -81,6 +84,8 @@ Module cpu
 
         branchAddress = New List(Of branchEvent)
         indirectJmpList = New List(Of instJump)
+        hasIndirectJmp = False
+
     End Sub
 
     Public Sub powerOn()
@@ -128,8 +133,9 @@ Module cpu
         pc(1).currentValue = t.address >> 8
     End Sub
 
-    Public Sub run()
+    Public Sub run(pIndirestJmpAddr As String)
         Dim isRunning As Boolean = True
+        presetIndirectJmpAddr = pIndirestJmpAddr
         'read instruction
         Dim opCode As memoryByte
         Dim pcVal As UInt16
@@ -217,9 +223,13 @@ Module cpu
                 Else
                     tInst.isIndirect = True
                     tInst.jumpToAddress = tAddress
-                    'unknown jump target, not sure how to handle yet
+                    'unknown jump target
                     'add to lsv
                     indirectJmpList.Add(tInst)
+                    If Not hasIndirectJmp Then
+                        tInst.readIndirectJumpTargetString(presetIndirectJmpAddr)
+                        hasIndirectJmp = True
+                    End If
 
                     stillRunning = False
                 End If
