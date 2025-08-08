@@ -1231,7 +1231,7 @@ Module analyzer
                                 End If
                         End Select
 
-                        Dim flagNotRequired As Boolean = True
+                        Dim flagNotRequired As Boolean = False
 
                         If b2.flgZReqAddress.Count = 0 And b2.flgNReqAddress.Count = 0 Then
                             flagNotRequired = True
