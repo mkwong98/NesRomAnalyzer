@@ -111,6 +111,19 @@ Module analyzer
         t.name = "NMI"
         tasksToRun.Add(t)
 
+        If frm.txtIndirectAddress.Text > "" Then
+            Dim tx() As String = Split(frm.txtIndirectAddress.Text, ",")
+            For Each a As String In tx
+                If a <> "" Then
+                    addJSRTask(Convert.ToUInt16(a, 16), UInteger.MaxValue)
+                End If
+            Next
+
+        End If
+
+
+
+
         Dim i As ListViewItem
 
         While currentTask < tasksToRun.Count
