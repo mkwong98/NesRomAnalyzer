@@ -243,6 +243,8 @@ Module cpu
                 tInst.subAddress = readAsAddress(&HFFFE, PrgByteType.PEEK, 0)
                 tInst.subRealAddress = read(tInst.subAddress, PrgByteType.PEEK, 0).source.ID
                 oInst = tInst
+                incPC()
+
             Case "LDA"
                 Dim tInst As New instTransfer
                 a = handleReadAddressMode(opTable(pOpCode.currentValue).mode, operand(0).currentValue, operand(1).currentValue, pOpCode.source, tRemarks, tInst.source)
@@ -731,7 +733,7 @@ Module cpu
         fillOpInfo(opTable(&H10), "BPL", 2, AddressingMode.RELATIVE)
 
         'BRK Break
-        fillOpInfo(opTable(&H0), "BRK", 2, AddressingMode.IMMEDIATE)
+        fillOpInfo(opTable(&H0), "BRK", 1, AddressingMode.IMMEDIATE)
 
         'BVC Branch if overflow clear
         fillOpInfo(opTable(&H50), "BVC", 2, AddressingMode.RELATIVE)

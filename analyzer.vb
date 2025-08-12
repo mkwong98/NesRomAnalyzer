@@ -99,6 +99,8 @@ Module analyzer
         tmpTracedAddress.Clear()
         codeSections.Clear()
         blocks.Clear()
+
+        rom.resetPrgLOG()
     End Sub
 
 

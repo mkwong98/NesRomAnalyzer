@@ -237,4 +237,10 @@ Module rom
         Return prgROMSize
     End Function
 
+    Public Sub resetPrgLOG()
+        For i As Integer = 0 To prgROMSize - 1
+            prgLOG(i) = PrgByteType.UNKNOWN
+        Next
+    End Sub
+
 End Module
