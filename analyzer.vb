@@ -131,6 +131,15 @@ Module analyzer
         t.name = "NMI"
         tasksToRun.Add(t)
 
+        'add indirect jump task
+        Dim tt() As String = Split(frm.txtIndirectAddress.Text, ",")
+        For Each a As String In tt
+            If a <> "" Then
+                Dim tMemory As memoryByte = read(Convert.ToUInt16(a, 16), PrgByteType.PEEK, 0)
+                addJSRTask(Convert.ToUInt16(a, 16), tMemory.source.ID)
+            End If
+        Next
+
         Dim i As ListViewItem
 
         While currentTask < tasksToRun.Count
@@ -163,7 +172,7 @@ Module analyzer
 
             tasksToRun(currentTask) = t
             'start running
-            console.run(frm.txtIndirectAddress.Text)
+            console.run()
             i = frm.lsvOutput.Items.Add("END")
             tasksToRun(currentTask) = t
             currentTask += 1
@@ -171,24 +180,6 @@ Module analyzer
         End While
 
         printAnaCode()
-
-        For Each inst As instJump In indirectJmpList
-            Dim hasItem As Boolean = False
-            For Each itx As ListViewItem In frmMain.lsvIndirectJmp.Items
-                If itx.Text = realAddressToHexStr(inst.realAddress) Then
-                    hasItem = True
-
-                End If
-            Next
-            If Not hasItem Then
-                Dim itx As ListViewItem = frmMain.lsvIndirectJmp.Items.Add(realAddressToHexStr(inst.realAddress))
-                itx.SubItems.Add(realAddressToHexStr(inst.jumpToAddress))
-                itx.SubItems.Add("")
-                itx.Selected = True
-            End If
-        Next
-
-        startIndirect()
 
         MsgBox("Basic steps completed")
 
@@ -218,7 +209,7 @@ Module analyzer
 
             tasksToRun(currentTask) = t
             'start running
-            console.run("")
+            console.run()
             i = frm.lsvOutput.Items.Add("END")
             tasksToRun(currentTask) = t
             currentTask += 1
@@ -230,13 +221,13 @@ Module analyzer
         For i As Integer = indirectCount To indirectJmpList.Count - 1
             Dim inst As instJump = indirectJmpList(i)
             Dim hasItem As Boolean = False
-            For Each itx As ListViewItem In frmMain.lsvIndirectJmp.Items
+            For Each itx As ListViewItem In frm.lsvIndirectJmp.Items
                 If itx.Text = realAddressToHexStr(inst.realAddress) Then
                     hasItem = True
                 End If
             Next
             If Not hasItem Then
-                Dim itx As ListViewItem = frmMain.lsvIndirectJmp.Items.Add(realAddressToHexStr(inst.realAddress))
+                Dim itx As ListViewItem = frm.lsvIndirectJmp.Items.Add(realAddressToHexStr(inst.realAddress))
                 itx.SubItems.Add(realAddressToHexStr(inst.jumpToAddress))
                 itx.SubItems.Add("")
                 itx.Selected = True
@@ -247,7 +238,7 @@ Module analyzer
     End Sub
 
     Private Sub printAnaCode()
-        frmMain.txtAnaCode.Text = ""
+        frm.txtAnaCode.Text = ""
         For Each b As block In lines
             If b.code.Count > 0 Then
                 Dim s As String = b.saveToString()
@@ -256,6 +247,9 @@ Module analyzer
                 End If
             End If
         Next
+        If frm.txtIndirectAddress.Text <> "" Then
+            frmMain.txtAnaCode.Text &= "Indirect:" & frm.txtIndirectAddress.Text & vbCrLf
+        End If
     End Sub
 
 
@@ -459,6 +453,22 @@ Module analyzer
             traceBranch(t)
         End If
 
+        If frm.txtIndirectAddress.Text <> "" Then
+            Dim tt() As String = Split(frm.txtIndirectAddress.Text, ",")
+            For Each a As String In tt
+                If a <> "" Then
+                    Dim tMemory As memoryByte = read(Convert.ToUInt16(a, 16), PrgByteType.PEEK, 0)
+                    t = New traceTask
+                    t.name = "SUB_" & realAddressToHexStr(tMemory.source.ID)
+                    t.realAddress = tMemory.source.ID
+                    t.type = TaskType.JSR
+                    t.source = UInt32.MaxValue
+                    traceTasksToRun.Add(t)
+                    traceBranch(t)
+                End If
+            Next
+        End If
+
 
         'trace all required reg and flag changes
         For i As Integer = 1 To fullCode.Count - 1
@@ -508,6 +518,16 @@ Module analyzer
         splitSection(UInt32.MaxValue, nmiAddress)
         If hasBrk And Not brkTraced Then
             splitSection(UInt32.MaxValue, brkAddress)
+        End If
+
+        If frm.txtIndirectAddress.Text <> "" Then
+            Dim tt() As String = Split(frm.txtIndirectAddress.Text, ",")
+            For Each a As String In tt
+                If a <> "" Then
+                    Dim tMemory As memoryByte = read(Convert.ToUInt16(a, 16), PrgByteType.PEEK, 0)
+                    splitSection(UInt32.MaxValue, tMemory.source.ID)
+                End If
+            Next
         End If
 
         For i As Integer = 0 To fullCode.Count - 1
@@ -623,18 +643,23 @@ Module analyzer
 
     Public Sub loadBlocksFromString(s As String)
         Do Until s = ""
-            Dim b As New block
-            b.loadFromString(s)
-            lines.Add(b)
-            Select Case b.type
-                Case BlockType.RESET
-                    resetAddress = b.realAddress
-                Case BlockType.NMI
-                    nmiAddress = b.realAddress
-                Case BlockType.BRK
-                    brkAddress = b.realAddress
-                    hasBrk = True
-            End Select
+            If s.StartsWith("Indirect:") Then
+                frm.txtIndirectAddress.Text = s.Substring(9).Trim()
+                s = ""
+            Else
+                Dim b As New block
+                b.loadFromString(s)
+                lines.Add(b)
+                Select Case b.type
+                    Case BlockType.RESET
+                        resetAddress = b.realAddress
+                    Case BlockType.NMI
+                        nmiAddress = b.realAddress
+                    Case BlockType.BRK
+                        brkAddress = b.realAddress
+                        hasBrk = True
+                End Select
+            End If
         Loop
     End Sub
 
@@ -2339,7 +2364,7 @@ Module analyzer
         For Each bl As block In blocks
             s &= bl.printToHeader
         Next
-        If indirectJmpList.Count > 0 Then
+        If indirectJmpList.Count > 0 Or frm.txtIndirectAddress.Text <> "" Then
             s &= "void indirectJump(Uint16 target);" & vbCrLf
         End If
         frm.txtCHeader.Text = s
@@ -2348,7 +2373,7 @@ Module analyzer
         For Each bl As block In blocks
             s &= bl.printToCode("")
         Next
-        If indirectJmpList.Count > 0 Then
+        If indirectJmpList.Count > 0 Or frm.txtIndirectAddress.Text <> "" Then
             s &= "void game::indirectJump(Uint16 target){" & vbCrLf
             s &= "    switch(target){" & vbCrLf
             For Each j As instJump In indirectJmpList
@@ -2358,6 +2383,19 @@ Module analyzer
                     s &= "        break;" & vbCrLf
                 Next
             Next
+
+            If frm.txtIndirectAddress.Text <> "" Then
+                Dim tt() As String = Split(frm.txtIndirectAddress.Text, ",")
+                For Each a As String In tt
+                    If a <> "" Then
+                        Dim tMemory As memoryByte = read(Convert.ToUInt16(a, 16), PrgByteType.PEEK, 0)
+                        s &= "    case 0x" & a & ":" & vbCrLf
+                        s &= "        SUB_" & realAddressToHexStr(tMemory.source.ID) & "();" & vbCrLf
+                        s &= "        break;" & vbCrLf
+                    End If
+                Next
+            End If
+
             s &= "    }" & vbCrLf
             s &= "}" & vbCrLf
         End If

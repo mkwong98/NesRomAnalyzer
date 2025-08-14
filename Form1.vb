@@ -23,6 +23,11 @@ Public Class frmMain
 
     Private Sub btnProcess_Click(sender As Object, e As EventArgs) Handles btnProcess.Click
         If fileRead Then
+            lsvOutput.Items.Clear()
+            lsvIndirectJmp.Items.Clear()
+            cboTargetAddress.Text = ""
+            cboTargetAddress.Items.Clear()
+            txtAnaCode.Text = ""
             analyzer.start()
         End If
     End Sub

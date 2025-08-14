@@ -15,8 +15,8 @@
         rom.setupMapperConfig(t.mapperConfig)
     End Sub
 
-    Public Sub run(pIndirestJmpAddr As String)
-        cpu.run(pIndirestJmpAddr)
+    Public Sub run()
+        cpu.run()
     End Sub
 
 
