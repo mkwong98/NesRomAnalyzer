@@ -193,7 +193,7 @@ Public MustInherit Class codeBlock
             Case AddressingMode.ZERO_PAGE_INDEXED_X
                 s &= "(" & "0x" & addressToHexStr(t.address) & " + x) & 0x00ff"
             Case AddressingMode.ZERO_PAGE_INDEXED_Y
-                s &= "(" & "0x" & addressToHexStr(t.address) & " + y) & 0x00ff)"
+                s &= "(" & "0x" & addressToHexStr(t.address) & " + y) & 0x00ff"
             Case AddressingMode.ABSOLUTE_INDEXED_X
                 s &= "0x" & addressToHexStr(t.address) & " + x"
             Case AddressingMode.ABSOLUTE_INDEXED_Y
