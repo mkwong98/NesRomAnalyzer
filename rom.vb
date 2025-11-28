@@ -172,6 +172,10 @@ Module rom
                 objMapper = New mapper000
             Case 1
                 objMapper = New mapper001
+            Case 2
+                objMapper = New mapper002
+            Case 3
+                objMapper = New mapper003
             Case Else
                 MsgBox("Unsupported mapper")
                 Return False
