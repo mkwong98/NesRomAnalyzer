@@ -135,7 +135,26 @@ Module analyzer
         Dim tt() As String = Split(frm.txtIndirectAddress.Text, ",")
         For Each a As String In tt
             If a <> "" Then
-                Dim tMemory As memoryByte = read(Convert.ToUInt16(a, 16), PrgByteType.PEEK, 0)
+                Dim tMemory As memoryByte = read(Convert.ToUInt16(a, 16), PrgByteType.PEEK)
+                addJSRTask(Convert.ToUInt16(a, 16), tMemory.source.ID)
+            End If
+        Next
+
+        'mark sections off as locked data
+        Dim dataBlockRangeStr() As String = Split(frm.txtDataRange.Text, ",")
+        For Each a As String In dataBlockRangeStr
+            If a <> "" Then
+                If InStr(a, "-") > 0 Then
+                    Dim parts() As String = Split(a, "-")
+                    Dim startAddress As UInt16 = Convert.ToUInt16(parts(0), 16)
+                    Dim endAddress As UInt16 = Convert.ToUInt16(parts(1), 16)
+                    For addr As UInt16 = startAddress To endAddress
+                        rom.readAddress(addr, PrgByteType.LOCKED_DATA)
+                    Next
+                Else
+                    rom.readAddress(Convert.ToUInt16(a, 16), PrgByteType.LOCKED_DATA)
+                End If
+                Dim tMemory As memoryByte = read(Convert.ToUInt16(a, 16), PrgByteType.PEEK)
                 addJSRTask(Convert.ToUInt16(a, 16), tMemory.source.ID)
             End If
         Next
@@ -181,6 +200,22 @@ Module analyzer
 
         printAnaCode()
 
+        For Each inst As instJump In indirectJmpList
+            Dim hasItem As Boolean = False
+            For Each itx As ListViewItem In frmMain.lsvIndirectJmp.Items
+                If itx.Text = realAddressToHexStr(inst.realAddress) Then
+                    hasItem = True
+
+                End If
+            Next
+            If Not hasItem Then
+                Dim itx As ListViewItem = frmMain.lsvIndirectJmp.Items.Add(realAddressToHexStr(inst.realAddress))
+                itx.SubItems.Add(realAddressToHexStr(inst.jumpToAddress))
+                itx.SubItems.Add("")
+                itx.Selected = True
+            End If
+        Next
+
         MsgBox("Basic steps completed")
 
     End Sub
@@ -190,7 +225,7 @@ Module analyzer
         Dim indirectCount As Integer = indirectJmpList.Count
         For Each inst As instJump In indirectJmpList
             For Each tAddress As UInt16 In inst.indirectJumpTargets
-                Dim tMemory As memoryByte = read(tAddress, PrgByteType.PEEK, 0)
+                Dim tMemory As memoryByte = read(tAddress, PrgByteType.PEEK)
                 addJSRTask(tAddress, tMemory.source.ID)
             Next
         Next
@@ -279,8 +314,8 @@ Module analyzer
     Public Function initTaskForInterrupt(pAddress As UInt16, pSource As memoryID) As taskToRun
         Dim t As taskToRun
         t.id = tasksToRun.Count
-        t.address = readAsAddress(pAddress, PrgByteType.INTERRUPT_VECTOR, pSource.ID)
-        t.realAddress = read(t.address, PrgByteType.PEEK, 0).source.ID
+        t.address = readAsAddress(pAddress, PrgByteType.INTERRUPT_VECTOR)
+        t.realAddress = read(t.address, PrgByteType.PEEK).source.ID
         t.mapperConfig = getMapperConfig()
         Return t
     End Function
@@ -390,7 +425,7 @@ Module analyzer
                     r.rangeStart = b.realAddress
                     If b.isIndirect Then
                         For Each tAddress As UInt16 In b.indirectJumpTargets
-                            Dim mb As memoryByte = read(tAddress, PrgByteType.CODE_HEAD, b.realAddress)
+                            Dim mb As memoryByte = read(tAddress, PrgByteType.CODE_HEAD)
                             r.rangeEnd = mb.source.ID
                             jumpLinks.Add(r)
                             b.indirectJumpRealTargets.Add(r.rangeEnd)
@@ -444,7 +479,7 @@ Module analyzer
             t.name = "BRK"
             If brkAddress = UInteger.MaxValue Then
                 'BRK not found, read from vector again
-                brkAddress = rom.readAddress(readAsAddress(&HFFFE, PrgByteType.INTERRUPT_VECTOR, 0), PrgByteType.INTERRUPT_VECTOR, 0).source.ID
+                brkAddress = rom.readAddress(readAsAddress(&HFFFE, PrgByteType.INTERRUPT_VECTOR), PrgByteType.INTERRUPT_VECTOR).source.ID
             End If
             t.realAddress = brkAddress
             t.type = TaskType.BRK
@@ -457,7 +492,7 @@ Module analyzer
             Dim tt() As String = Split(frm.txtIndirectAddress.Text, ",")
             For Each a As String In tt
                 If a <> "" Then
-                    Dim tMemory As memoryByte = read(Convert.ToUInt16(a, 16), PrgByteType.PEEK, 0)
+                    Dim tMemory As memoryByte = read(Convert.ToUInt16(a, 16), PrgByteType.PEEK)
                     t = New traceTask
                     t.name = "SUB_" & realAddressToHexStr(tMemory.source.ID)
                     t.realAddress = tMemory.source.ID
@@ -524,7 +559,7 @@ Module analyzer
             Dim tt() As String = Split(frm.txtIndirectAddress.Text, ",")
             For Each a As String In tt
                 If a <> "" Then
-                    Dim tMemory As memoryByte = read(Convert.ToUInt16(a, 16), PrgByteType.PEEK, 0)
+                    Dim tMemory As memoryByte = read(Convert.ToUInt16(a, 16), PrgByteType.PEEK)
                     splitSection(UInt32.MaxValue, tMemory.source.ID)
                 End If
             Next
@@ -2388,7 +2423,7 @@ Module analyzer
                 Dim tt() As String = Split(frm.txtIndirectAddress.Text, ",")
                 For Each a As String In tt
                     If a <> "" Then
-                        Dim tMemory As memoryByte = read(Convert.ToUInt16(a, 16), PrgByteType.PEEK, 0)
+                        Dim tMemory As memoryByte = read(Convert.ToUInt16(a, 16), PrgByteType.PEEK)
                         s &= "    case 0x" & a & ":" & vbCrLf
                         s &= "        SUB_" & realAddressToHexStr(tMemory.source.ID) & "();" & vbCrLf
                         s &= "        break;" & vbCrLf

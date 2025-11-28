@@ -22,6 +22,7 @@ Public Enum PrgByteType
     CODE_HEAD
     CODE_TAIL
     DATA
+    LOCKED_DATA
     ADDRESS
     INTERRUPT_VECTOR
     UNKNOWN
@@ -199,7 +200,7 @@ Module rom
         Return prgLOG(pAddress) <> PrgByteType.UNKNOWN
     End Function
 
-    Public Function readAddress(pAddress As UInt16, pReadType As PrgByteType, pAccess As UInt32) As memoryByte
+    Public Function readAddress(pAddress As UInt16, pReadType As PrgByteType) As memoryByte
         'convert to actual address
         Dim realAddress As memoryID
         realAddress = objMapper.getActualAddress(pAddress)
@@ -211,8 +212,8 @@ Module rom
             result.currentValue = prgROM(realAddress.ID)
             result.unchanged = True
             result.currentUsage = prgLOG(realAddress.ID)
-            If pReadType <> PrgByteType.PEEK And (prgLOG(realAddress.ID) = PrgByteType.UNKNOWN _
-                Or (prgLOG(realAddress.ID) <> PrgByteType.CODE_HEAD And pReadType = PrgByteType.CODE_HEAD)) Then
+            If (pReadType <> PrgByteType.PEEK And (prgLOG(realAddress.ID) = PrgByteType.UNKNOWN) _
+                Or (prgLOG(realAddress.ID) <> PrgByteType.CODE_HEAD And prgLOG(realAddress.ID) <> PrgByteType.LOCKED_DATA And pReadType = PrgByteType.CODE_HEAD)) Then
                 prgLOG(realAddress.ID) = pReadType
             End If
         End If

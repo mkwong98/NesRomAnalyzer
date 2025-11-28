@@ -137,15 +137,19 @@ Module cpu
         Dim pcVal As UInt16
         While isRunning
             pcVal = CInt(pc(1).currentValue) << 8 Or pc(0).currentValue
-            opCode = read(pcVal, PrgByteType.CODE_HEAD, 0)
-            incPC()
-            isRunning = runOpCode(opCode, pcVal)
+            opCode = read(pcVal, PrgByteType.CODE_HEAD)
+            If opCode.currentUsage = PrgByteType.LOCKED_DATA Then
+                isRunning = False
+            Else
+                incPC()
+                isRunning = runOpCode(opCode, pcVal)
+            End If
 
             While branchAddress.Count > 0 And Not isRunning
                 'handle possible branch that missed
                 Dim b As branchEvent = branchAddress(0)
                 branchAddress.RemoveAt(0)
-                opCode = read(b.target, PrgByteType.PEEK, 0)
+                opCode = read(b.target, PrgByteType.PEEK)
                 If Not opCode.known Then
                     isRunning = True
                     pc(1).currentValue = b.target >> 8
@@ -164,7 +168,7 @@ Module cpu
         Dim i As Integer = 1
         Dim operand(1) As memoryByte
         While i < l
-            operand(i - 1) = read(CInt(pc(1).currentValue) << 8 Or pc(0).currentValue, PrgByteType.CODE_HEAD, 0)
+            operand(i - 1) = read(CInt(pc(1).currentValue) << 8 Or pc(0).currentValue, PrgByteType.CODE_HEAD)
             incPC()
             i += 1
         End While
@@ -191,7 +195,7 @@ Module cpu
                 stillRunning = False
             Case "JSR"
                 tAddress = CInt(operand(1).currentValue) << 8 Or operand(0).currentValue
-                tMemory = read(tAddress, PrgByteType.PEEK, 0)
+                tMemory = read(tAddress, PrgByteType.PEEK)
                 addJSRTask(tAddress, tMemory.source.ID)
                 tRemarks = realAddressToHexStr(tMemory.source.ID)
 
@@ -202,7 +206,7 @@ Module cpu
                 oInst = tInst
             Case "JMP"
                 tAddress = CInt(operand(1).currentValue) << 8 Or operand(0).currentValue
-                tMemory = read(tAddress, PrgByteType.PEEK, 0)
+                tMemory = read(tAddress, PrgByteType.PEEK)
 
                 Dim tInst As New instJump
                 tInst.jumpToAddress = tAddress
@@ -231,8 +235,8 @@ Module cpu
 
                 Dim tInst As New instSubroutine
                 tInst.restoreFlags = True
-                tInst.subAddress = readAsAddress(&HFFFE, PrgByteType.PEEK, 0)
-                tInst.subRealAddress = read(tInst.subAddress, PrgByteType.PEEK, 0).source.ID
+                tInst.subAddress = readAsAddress(&HFFFE, PrgByteType.PEEK)
+                tInst.subRealAddress = read(tInst.subAddress, PrgByteType.PEEK).source.ID
                 oInst = tInst
                 incPC()
 
@@ -437,7 +441,7 @@ Module cpu
                     tAddress -= &H100
                 End If
                 tAddress += operand(0).currentValue
-                tMemory = read(tAddress, PrgByteType.PEEK, 0)
+                tMemory = read(tAddress, PrgByteType.PEEK)
                 If Not tMemory.known Then
                     Dim b As branchEvent
                     b.sourceID = pOpCode.source.ID
@@ -545,46 +549,46 @@ Module cpu
                 t.realAddress.ID = CpuRegister.a
                 Return a
             Case AddressingMode.ZERO_PAGE
-                v = read(op0, PrgByteType.DATA, pSource.ID)
+                v = read(op0, PrgByteType.DATA)
                 v.unchanged = False
                 remarks = getMemoryName(v.source)
                 t.address = op0
                 t.realAddress = v.source
                 Return v
             Case AddressingMode.ZERO_PAGE_INDEXED_X
-                v = read(op0, PrgByteType.PEEK, pSource.ID)
+                v = read(op0, PrgByteType.PEEK)
                 remarks = getMemoryName(v.source) & "+X"
                 t.address = op0
                 t.realAddress = v.source
             Case AddressingMode.ZERO_PAGE_INDEXED_Y
-                v = read(op0, PrgByteType.PEEK, pSource.ID)
+                v = read(op0, PrgByteType.PEEK)
                 remarks = getMemoryName(v.source) & "+Y"
                 t.address = op0
                 t.realAddress = v.source
             Case AddressingMode.ABSOLUTE
                 t.address = CInt(op1) << 8 Or op0
-                v = read(t.address, PrgByteType.DATA, pSource.ID)
+                v = read(t.address, PrgByteType.DATA)
                 v.unchanged = False
                 remarks = getMemoryName(v.source)
                 t.realAddress = v.source
                 Return v
             Case AddressingMode.ABSOLUTE_INDEXED_X
                 t.address = CInt(op1) << 8 Or op0
-                v = read(CInt(op1) << 8 Or op0, PrgByteType.PEEK, pSource.ID)
+                v = read(CInt(op1) << 8 Or op0, PrgByteType.PEEK)
                 remarks = getMemoryName(v.source) & "+X"
                 t.realAddress = v.source
             Case AddressingMode.ABSOLUTE_INDEXED_Y
                 t.address = CInt(op1) << 8 Or op0
-                v = read(CInt(op1) << 8 Or op0, PrgByteType.PEEK, pSource.ID)
+                v = read(CInt(op1) << 8 Or op0, PrgByteType.PEEK)
                 remarks = getMemoryName(v.source) & "+Y"
                 t.realAddress = v.source
             Case AddressingMode.INDEXED_INDIRECT_X
-                v = read(op0, PrgByteType.PEEK, pSource.ID)
+                v = read(op0, PrgByteType.PEEK)
                 remarks = "(RAM(" & addressToHexStr(op0) & "+X))"
                 t.address = op0
                 t.realAddress = v.source
             Case AddressingMode.INDIRECT_INDEXED_Y
-                v = read(op0, PrgByteType.DATA, pSource.ID)
+                v = read(op0, PrgByteType.DATA)
                 remarks = "(RAM(" & addressToHexStr(op0) & ")+Y)"
                 t.address = op0
                 t.realAddress = v.source
@@ -601,43 +605,43 @@ Module cpu
         Select Case m
             Case AddressingMode.ZERO_PAGE
                 write(op0, pV)
-                v = read(op0, PrgByteType.PEEK, pSource.ID)
+                v = read(op0, PrgByteType.PEEK)
                 remarks = getMemoryName(v.source)
                 t.address = op0
                 t.realAddress = v.source
             Case AddressingMode.ZERO_PAGE_INDEXED_X
-                v = read(op0, PrgByteType.PEEK, pSource.ID)
+                v = read(op0, PrgByteType.PEEK)
                 remarks = getMemoryName(v.source) & "+X"
                 t.address = op0
                 t.realAddress = v.source
             Case AddressingMode.ZERO_PAGE_INDEXED_Y
-                v = read(op0, PrgByteType.PEEK, pSource.ID)
+                v = read(op0, PrgByteType.PEEK)
                 remarks = getMemoryName(v.source) & "+Y"
                 t.address = op0
                 t.realAddress = v.source
             Case AddressingMode.ABSOLUTE
                 t.address = CInt(op1) << 8 Or op0
                 write(t.address, pV)
-                v = read(t.address, PrgByteType.PEEK, pSource.ID)
+                v = read(t.address, PrgByteType.PEEK)
                 remarks = getMemoryName(v.source)
                 t.realAddress = v.source
             Case AddressingMode.ABSOLUTE_INDEXED_X
                 t.address = CInt(op1) << 8 Or op0
-                v = read(t.address, PrgByteType.PEEK, pSource.ID)
+                v = read(t.address, PrgByteType.PEEK)
                 remarks = getMemoryName(v.source) & "+X"
                 t.realAddress = v.source
             Case AddressingMode.ABSOLUTE_INDEXED_Y
                 t.address = CInt(op1) << 8 Or op0
-                v = read(t.address, PrgByteType.PEEK, pSource.ID)
+                v = read(t.address, PrgByteType.PEEK)
                 remarks = getMemoryName(v.source) & "+Y"
                 t.realAddress = v.source
             Case AddressingMode.INDEXED_INDIRECT_X
-                v = read(op0, PrgByteType.PEEK, pSource.ID)
+                v = read(op0, PrgByteType.PEEK)
                 remarks = "(RAM(" & addressToHexStr(op0) & "+X))"
                 t.address = op0
                 t.realAddress = v.source
             Case AddressingMode.INDIRECT_INDEXED_Y
-                v = read(op0, PrgByteType.DATA, pSource.ID)
+                v = read(op0, PrgByteType.DATA)
                 remarks = "(RAM(" & addressToHexStr(op0) & ")+Y)"
                 t.address = op0
                 t.realAddress = v.source

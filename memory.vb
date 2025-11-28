@@ -40,7 +40,7 @@ Module memory
         Next
     End Sub
 
-    Public Function read(pAddress As UInt16, pUsage As PrgByteType, pAccess As UInt32) As memoryByte
+    Public Function read(pAddress As UInt16, pUsage As PrgByteType) As memoryByte
         Dim tMem As memoryByte
         If pAddress < &H2000 Then
             tMem.source.Type = MemoryType.RAM
@@ -60,14 +60,14 @@ Module memory
             tMem.source.ID = pAddress
             tMem.unchanged = False
         Else
-            tMem = readAddress(pAddress, pUsage, pAccess)
+            tMem = readAddress(pAddress, pUsage)
         End If
         Return tMem
     End Function
 
-    Public Function readAsAddress(pAddress As UInt16, pUsage As PrgByteType, pAccess As UInt32) As UInt16
-        Dim tMem As memoryByte = read(pAddress, pUsage, pAccess)
-        Dim tMem2 As memoryByte = read(pAddress + 1, pUsage, pAccess)
+    Public Function readAsAddress(pAddress As UInt16, pUsage As PrgByteType) As UInt16
+        Dim tMem As memoryByte = read(pAddress, pUsage)
+        Dim tMem2 As memoryByte = read(pAddress + 1, pUsage)
         Return CInt(tMem2.currentValue) << 8 Or tMem.currentValue
     End Function
 

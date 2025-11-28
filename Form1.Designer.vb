@@ -64,6 +64,8 @@ Partial Class frmMain
         sfdAnaFile = New SaveFileDialog()
         Label3 = New Label()
         txtIndirectAddress = New TextBox()
+        Label4 = New Label()
+        txtDataRange = New TextBox()
         TabControl1.SuspendLayout()
         TabPage1.SuspendLayout()
         TabPage2.SuspendLayout()
@@ -106,7 +108,7 @@ Partial Class frmMain
         btnProcess.Anchor = AnchorStyles.Top Or AnchorStyles.Right
         btnProcess.Location = New Point(1076, 7)
         btnProcess.Name = "btnProcess"
-        btnProcess.Size = New Size(95, 52)
+        btnProcess.Size = New Size(95, 81)
         btnProcess.TabIndex = 4
         btnProcess.Text = "Process"
         btnProcess.UseVisualStyleBackColor = True
@@ -117,10 +119,10 @@ Partial Class frmMain
         TabControl1.Controls.Add(TabPage1)
         TabControl1.Controls.Add(TabPage2)
         TabControl1.Controls.Add(TabPage3)
-        TabControl1.Location = New Point(8, 68)
+        TabControl1.Location = New Point(8, 98)
         TabControl1.Name = "TabControl1"
         TabControl1.SelectedIndex = 0
-        TabControl1.Size = New Size(1163, 551)
+        TabControl1.Size = New Size(1163, 521)
         TabControl1.TabIndex = 5
         ' 
         ' TabPage1
@@ -136,7 +138,7 @@ Partial Class frmMain
         TabPage1.Location = New Point(4, 24)
         TabPage1.Name = "TabPage1"
         TabPage1.Padding = New Padding(3)
-        TabPage1.Size = New Size(1155, 523)
+        TabPage1.Size = New Size(1155, 493)
         TabPage1.TabIndex = 0
         TabPage1.Text = "Basic disassembly"
         TabPage1.UseVisualStyleBackColor = True
@@ -144,7 +146,7 @@ Partial Class frmMain
         ' btnRunIndirect
         ' 
         btnRunIndirect.Anchor = AnchorStyles.Bottom Or AnchorStyles.Right
-        btnRunIndirect.Location = New Point(837, 443)
+        btnRunIndirect.Location = New Point(837, 413)
         btnRunIndirect.Name = "btnRunIndirect"
         btnRunIndirect.Size = New Size(312, 27)
         btnRunIndirect.TabIndex = 14
@@ -154,7 +156,7 @@ Partial Class frmMain
         ' btnRemoveTargetAddress
         ' 
         btnRemoveTargetAddress.Anchor = AnchorStyles.Bottom Or AnchorStyles.Right
-        btnRemoveTargetAddress.Location = New Point(1048, 410)
+        btnRemoveTargetAddress.Location = New Point(1048, 380)
         btnRemoveTargetAddress.Name = "btnRemoveTargetAddress"
         btnRemoveTargetAddress.Size = New Size(101, 27)
         btnRemoveTargetAddress.TabIndex = 13
@@ -164,7 +166,7 @@ Partial Class frmMain
         ' btnAddTargetAddress
         ' 
         btnAddTargetAddress.Anchor = AnchorStyles.Bottom Or AnchorStyles.Right
-        btnAddTargetAddress.Location = New Point(1049, 377)
+        btnAddTargetAddress.Location = New Point(1049, 347)
         btnAddTargetAddress.Name = "btnAddTargetAddress"
         btnAddTargetAddress.Size = New Size(101, 27)
         btnAddTargetAddress.TabIndex = 12
@@ -178,14 +180,14 @@ Partial Class frmMain
         cboTargetAddress.FormattingEnabled = True
         cboTargetAddress.Location = New Point(1049, 24)
         cboTargetAddress.Name = "cboTargetAddress"
-        cboTargetAddress.Size = New Size(103, 347)
+        cboTargetAddress.Size = New Size(103, 317)
         cboTargetAddress.TabIndex = 11
         ' 
         ' Label2
         ' 
         Label2.Anchor = AnchorStyles.Bottom Or AnchorStyles.Right
         Label2.AutoSize = True
-        Label2.Location = New Point(1046, 7)
+        Label2.Location = New Point(1046, -23)
         Label2.Name = "Label2"
         Label2.Size = New Size(103, 15)
         Label2.TabIndex = 10
@@ -198,7 +200,7 @@ Partial Class frmMain
         lsvIndirectJmp.FullRowSelect = True
         lsvIndirectJmp.Location = New Point(837, 6)
         lsvIndirectJmp.Name = "lsvIndirectJmp"
-        lsvIndirectJmp.Size = New Size(206, 431)
+        lsvIndirectJmp.Size = New Size(206, 401)
         lsvIndirectJmp.TabIndex = 8
         lsvIndirectJmp.UseCompatibleStateImageBehavior = False
         lsvIndirectJmp.View = View.Details
@@ -216,7 +218,7 @@ Partial Class frmMain
         ' btnExportBasic
         ' 
         btnExportBasic.Anchor = AnchorStyles.Bottom Or AnchorStyles.Right
-        btnExportBasic.Location = New Point(1017, 482)
+        btnExportBasic.Location = New Point(1017, 452)
         btnExportBasic.Name = "btnExportBasic"
         btnExportBasic.Size = New Size(121, 33)
         btnExportBasic.TabIndex = 7
@@ -229,7 +231,7 @@ Partial Class frmMain
         lsvOutput.Columns.AddRange(New ColumnHeader() {ColumnHeader1, ColumnHeader2, ColumnHeader3, ColumnHeader4, ColumnHeader5, ColumnHeader6, ColumnHeader12})
         lsvOutput.Location = New Point(6, 6)
         lsvOutput.Name = "lsvOutput"
-        lsvOutput.Size = New Size(825, 470)
+        lsvOutput.Size = New Size(825, 440)
         lsvOutput.TabIndex = 5
         lsvOutput.UseCompatibleStateImageBehavior = False
         lsvOutput.View = View.Details
@@ -450,11 +452,30 @@ Partial Class frmMain
         txtIndirectAddress.Size = New Size(916, 23)
         txtIndirectAddress.TabIndex = 3
         ' 
+        ' Label4
+        ' 
+        Label4.AutoSize = True
+        Label4.Location = New Point(8, 68)
+        Label4.Name = "Label4"
+        Label4.Size = New Size(156, 15)
+        Label4.TabIndex = 8
+        Label4.Text = "Data block address ranges"
+        ' 
+        ' txtDataRange
+        ' 
+        txtDataRange.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+        txtDataRange.Location = New Point(170, 65)
+        txtDataRange.Name = "txtDataRange"
+        txtDataRange.Size = New Size(900, 23)
+        txtDataRange.TabIndex = 9
+        ' 
         ' frmMain
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         ClientSize = New Size(1177, 631)
+        Controls.Add(txtDataRange)
+        Controls.Add(Label4)
         Controls.Add(txtIndirectAddress)
         Controls.Add(Label3)
         Controls.Add(TabControl1)
@@ -517,5 +538,7 @@ Partial Class frmMain
     Friend WithEvents btnRunIndirect As Button
     Friend WithEvents Label3 As Label
     Friend WithEvents txtIndirectAddress As TextBox
+    Friend WithEvents Label4 As Label
+    Friend WithEvents txtDataRange As TextBox
 
 End Class
