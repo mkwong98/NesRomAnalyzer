@@ -1,7 +1,7 @@
 ﻿Public Class instSubroutine
     Inherits instruction
 
-    Public subRealAddress As UInt32
+    Public subRealAddress As List(Of UInt32)
     Public subAddress As UInt16
     Public restoreFlags As Boolean
 
@@ -14,12 +14,33 @@
 
     Public Overrides Sub loadInstructionContentFromString(ByRef r As String)
         Dim s() As String = r.Split(";"c)
-        subRealAddress = Convert.ToUInt32(s(0), 16)
+        readRealJumpTargetString(s(0))
         subAddress = Convert.ToUInt16(s(1), 16)
         restoreFlags = CBool(s(2))
     End Sub
 
     Public Overrides Function saveInstructionContentToString() As String
-        Return realAddressToHexStr(subRealAddress) & ";" & addressToHexStr(subAddress) & ";" & restoreFlags.ToString
+        Return getRealJumpTargetString() & ";" & addressToHexStr(subAddress) & ";" & restoreFlags.ToString
+    End Function
+
+    Public Sub readRealJumpTargetString(r As String)
+        subRealAddress.Clear()
+        Dim t() As String = Split(r, ",")
+        For Each a As String In t
+            If a <> "" Then
+                subRealAddress.Add(Convert.ToUInt32(a, 16))
+            End If
+        Next
+    End Sub
+
+    Public Function getRealJumpTargetString() As String
+        Dim r As String = ""
+        For Each a As UInt32 In subRealAddress
+            If r <> "" Then
+                r = r & ","
+            End If
+            r = r & realAddressToHexStr(a)
+        Next
+        Return r
     End Function
 End Class

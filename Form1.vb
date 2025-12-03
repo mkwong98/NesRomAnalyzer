@@ -15,9 +15,7 @@ Public Class frmMain
     Private Sub btnFilePicker_Click(sender As Object, e As EventArgs) Handles btnFilePicker.Click
         If ofdRomFile.ShowDialog = DialogResult.OK Then
             txtFilePath.Text = ofdRomFile.FileName
-            fileRead = readRomFile(txtFilePath.Text)
-            lsvIndirectJmp.Items.Clear()
-
+            filePathChanged()
         End If
     End Sub
 
@@ -81,8 +79,8 @@ Public Class frmMain
 
     Private Sub lsvIndirectJmp_ItemSelectionChanged(sender As Object, e As ListViewItemSelectionChangedEventArgs) Handles lsvIndirectJmp.ItemSelectionChanged
         If e.IsSelected Then
-            Dim addresses As String() = Split(e.Item.SubItems(2).Text, ",")
-            cboTargetAddress.Items.Clear()
+            Dim addresses = Split(e.Item.SubItems(2).Text, ",")
+            cboTargetAddress.Items.Clear
             cboTargetAddress.Items.AddRange(addresses)
         End If
     End Sub
@@ -94,14 +92,14 @@ Public Class frmMain
                 Return
             End If
             cboTargetAddress.Items.Add(cboTargetAddress.Text)
-            updateIndirectJumpTarget()
+            updateIndirectJumpTarget
         End If
     End Sub
 
     Private Sub btnRemoveTargetAddress_Click(sender As Object, e As EventArgs) Handles btnRemoveTargetAddress.Click
         If cboTargetAddress.Text <> "" Then
             cboTargetAddress.Items.Remove(cboTargetAddress.Text)
-            updateIndirectJumpTarget()
+            updateIndirectJumpTarget
         End If
     End Sub
 
@@ -125,5 +123,70 @@ Public Class frmMain
 
     Private Sub btnRunIndirect_Click(sender As Object, e As EventArgs) Handles btnRunIndirect.Click
         analyzer.startIndirect()
+    End Sub
+
+    Private Sub lsvBanks_ItemSelectionChanged(sender As Object, e As ListViewItemSelectionChangedEventArgs) Handles lsvBanks.ItemSelectionChanged
+        If e.IsSelected Then
+            Dim addresses = Split(e.Item.SubItems(2).Text, ",")
+            cboMapToAddress.Items.Clear()
+            cboMapToAddress.Items.AddRange(addresses)
+        End If
+    End Sub
+
+    Private Sub btnAddMapping_Click(sender As Object, e As EventArgs) Handles btnAddMapping.Click
+        If cboMapToAddress.Text <> "" Then
+            If cboMapToAddress.Items.Contains(cboMapToAddress.Text) Then
+                MsgBox("This mapping address is in the list")
+                Return
+            End If
+            cboMapToAddress.Items.Add(cboMapToAddress.Text)
+            updateMappingTarget()
+        End If
+    End Sub
+
+    Private Sub btnRemoveMapping_Click(sender As Object, e As EventArgs) Handles btnRemoveMapping.Click
+        If cboMapToAddress.Text <> "" Then
+            cboMapToAddress.Items.Remove(cboMapToAddress.Text)
+            updateMappingTarget()
+        End If
+    End Sub
+
+    Private Sub updateMappingTarget()
+        If lsvBanks.SelectedItems.Count = 0 Then Return
+        Dim itx = lsvBanks.SelectedItems(0)
+        Dim r As String = ""
+        For Each a As String In cboMapToAddress.Items
+            If r <> "" Then
+                r = r & ","
+            End If
+            r = r & a
+        Next
+        itx.SubItems(2).Text = r
+    End Sub
+
+    Private Sub txtFilePath_TextChanged(sender As Object, e As EventArgs) Handles txtFilePath.TextChanged
+        filePathChanged()
+    End Sub
+
+    Sub filePathChanged()
+        fileRead = readRomFile(txtFilePath.Text)
+        If fileRead Then
+            lsvIndirectJmp.Items.Clear()
+            lstModes.Items.Clear()
+            lsvBanks.Items.Clear()
+
+            For Each m As mode In rom.getModes()
+                lstModes.Items.Add(m.name)
+            Next
+            For i As Integer = 0 To lstModes.Items.Count - 1
+                lstModes.SetSelected(i, rom.getModes()(i).enabled)
+            Next
+
+            For Each i As bankRange In rom.getBankRanges()
+                Dim itx As New ListViewItem({i.name, realAddressToHexStr(i.size)})
+                lsvBanks.Items.Add(itx)
+            Next
+        End If
+
     End Sub
 End Class

@@ -19,6 +19,10 @@ End Enum
 Public Structure memoryID
     Public Type As MemoryType
     Public ID As UInt32
+    Public mode As String
+    Public bank As String
+    Public mappedAddress As UInt32
+    Public address As UInt16
 End Structure
 
 
@@ -31,53 +35,44 @@ Public Structure memoryByte
 End Structure
 
 Module memory
-    Private internalRAM(&H7FF) As memoryByte
 
-    Public Sub powerOn()
-        For i As UInt16 = 0 To &H7FF
-            internalRAM(i).source.Type = MemoryType.RANDOM
-            internalRAM(i).currentValue = CByte(Int(VBMath.Rnd() * 256))
-        Next
-    End Sub
-
-    Public Function read(pAddress As UInt16, pUsage As PrgByteType) As memoryByte
+    Public Function read(pAddress As UInt16, pUsage As PrgByteType, pConfig As memoryID) As List(Of memoryByte)
+        Dim result As New List(Of memoryByte)
         Dim tMem As memoryByte
         If pAddress < &H2000 Then
             tMem.source.Type = MemoryType.RAM
             tMem.source.ID = pAddress And &H7FF
-            tMem.currentValue = internalRAM(tMem.source.ID).currentValue
-            tMem.unchanged = internalRAM(tMem.source.ID).unchanged
+            result.Add(tMem)
         ElseIf pAddress < &H4000 Then
             tMem.source.Type = MemoryType.PPU_REG
             tMem.source.ID = pAddress And &H7
             tMem.unchanged = False
+            result.Add(tMem)
         ElseIf pAddress < &H4018 Then
             tMem.source.Type = MemoryType.APU_REG
             tMem.source.ID = pAddress And &H17
             tMem.unchanged = False
+            result.Add(tMem)
         ElseIf pAddress < &H4020 Then
             tMem.source.Type = MemoryType.DISABLED
             tMem.source.ID = pAddress
             tMem.unchanged = False
+            result.Add(tMem)
         Else
-            tMem = readAddress(pAddress, pUsage)
+            result = getMappedMemoryBytesWithConfig(pAddress, pUsage, pConfig)
         End If
-        Return tMem
+        Return result
     End Function
 
-    Public Function readAsAddress(pAddress As UInt16, pUsage As PrgByteType) As UInt16
-        Dim tMem As memoryByte = read(pAddress, pUsage)
-        Dim tMem2 As memoryByte = read(pAddress + 1, pUsage)
-        Return CInt(tMem2.currentValue) << 8 Or tMem.currentValue
+    Public Function readAsAddress(pAddress As UInt16, pUsage As PrgByteType, pConfig As memoryID) As List(Of UInt16)
+        Dim result As New List(Of UInt16)
+        Dim tMem As List(Of memoryByte) = read(pAddress, pUsage, pConfig)
+        For Each mb As memoryByte In tMem
+            Dim val As Byte = rom.prgROM(mb.source.ID + 1)
+            result.Add(CInt(val) << 8 Or mb.currentValue)
+        Next
+        Return result
     End Function
-
-    Public Sub write(pAddress As UInt16, pV As memoryByte)
-        If pAddress < &H2000 Then
-            internalRAM(pAddress And &H7FF) = pV
-        ElseIf pAddress >= &H4020 Then
-            writeAddress(pAddress, pV)
-        End If
-    End Sub
 
     Public Function getMemoryName(m As memoryID) As String
         Dim r As String = ""

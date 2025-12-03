@@ -204,38 +204,58 @@ Module rom
         Return prgLOG(pAddress) <> PrgByteType.UNKNOWN
     End Function
 
-    Public Function readAddress(pAddress As UInt16, pReadType As PrgByteType) As memoryByte
-        'convert to actual address
-        Dim realAddress As memoryID
-        realAddress = objMapper.getActualAddress(pAddress)
-        Dim result As memoryByte
-        result.source = realAddress
-
-        If realAddress.Type = MemoryType.PRG_ROM Then
-            result.known = addressKnown(realAddress.ID)
-            result.currentValue = prgROM(realAddress.ID)
-            result.unchanged = True
-            result.currentUsage = prgLOG(realAddress.ID)
-            If (pReadType <> PrgByteType.PEEK And (prgLOG(realAddress.ID) = PrgByteType.UNKNOWN) _
-                Or (prgLOG(realAddress.ID) <> PrgByteType.CODE_HEAD And prgLOG(realAddress.ID) <> PrgByteType.LOCKED_DATA And pReadType = PrgByteType.CODE_HEAD)) Then
-                prgLOG(realAddress.ID) = pReadType
+    Public Function getMappedMemoryBytes(pAddress As UInt16, pReadType As PrgByteType) As List(Of memoryByte)
+        Dim result As New List(Of memoryByte)
+        Dim realAddresses As List(Of memoryID) = objMapper.getActualAddress(pAddress)
+        For Each addr As memoryID In realAddresses
+            Dim mb As memoryByte
+            mb.source = addr
+            If addr.Type = MemoryType.PRG_ROM Then
+                mb.known = addressKnown(addr.ID)
+                mb.currentValue = prgROM(addr.ID)
+                mb.unchanged = True
+                mb.currentUsage = prgLOG(addr.ID)
+                setMemmoryByteUsage(addr.ID, pReadType)
             End If
-        End If
-
+            result.Add(mb)
+        Next
         Return result
     End Function
 
-    Public Sub writeAddress(pAddress As UInt16, pV As memoryByte)
-        objMapper.write(pAddress, pV.currentValue)
+    Public Sub setMemmoryByteUsage(pAddress As UInt32, pReadType As PrgByteType)
+        If (pReadType <> PrgByteType.PEEK And (prgLOG(pAddress) = PrgByteType.UNKNOWN) _
+                Or (prgLOG(pAddress) <> PrgByteType.CODE_HEAD And prgLOG(pAddress) <> PrgByteType.LOCKED_DATA And pReadType = PrgByteType.CODE_HEAD)) Then
+            prgLOG(pAddress) = pReadType
+        End If
     End Sub
 
+    Public Function getMappedMemoryBytesWithConfig(pAddress As UInt16, pReadType As PrgByteType, pConfig As memoryID) As List(Of memoryByte)
+        Dim result As New List(Of memoryByte)
+        Dim realAddresses As List(Of memoryID) = objMapper.getActualAddressWithConfig(pAddress, pConfig)
+        For Each addr As memoryID In realAddresses
+            Dim mb As memoryByte
+            mb.source = addr
+            If addr.Type = MemoryType.PRG_ROM Then
+                mb.known = addressKnown(addr.ID)
+                mb.currentValue = prgROM(addr.ID)
+                mb.unchanged = True
+                mb.currentUsage = prgLOG(addr.ID)
+                setMemmoryByteUsage(addr.ID, pReadType)
+            End If
+            result.Add(mb)
+        Next
+        Return result
+    End Function
 
-    Public Sub setupMapperConfig(c As UInt64)
-        objMapper.setMapperConfig(c)
-    End Sub
-
-    Public Function getMapperConfig() As UInt64
-        Return objMapper.getMapperConfig
+    Public Function readRealAddress(pAddress As UInt32, pReadType As PrgByteType) As memoryByte
+        Dim mb As memoryByte
+        mb.source.ID = pAddress
+        mb.known = addressKnown(pAddress)
+        mb.currentValue = prgROM(pAddress)
+        mb.unchanged = True
+        mb.currentUsage = prgLOG(pAddress)
+        setMemmoryByteUsage(pAddress, pReadType)
+        Return mb
     End Function
 
     Public Function getPrgROMSize() As UInt32
@@ -248,4 +268,19 @@ Module rom
         Next
     End Sub
 
+    Public Function getBankRanges() As List(Of bankRange)
+        Return objMapper.banks
+    End Function
+
+    Public Function getModes() As List(Of mode)
+        Return objMapper.modes
+    End Function
+
+    Public Sub setEnabledModes(pModeNames As List(Of String))
+        objMapper.setEnabledModes(pModeNames)
+    End Sub
+
+    Public Sub setBankMappings(pModeName As String, pBankMappings As String)
+        objMapper.setBankMappings(pModeName, pBankMappings)
+    End Sub
 End Module

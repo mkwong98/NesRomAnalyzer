@@ -51,6 +51,7 @@ End Structure
 Structure branchEvent
     Public sourceID As UInt32
     Public target As UInt16
+    Public opCode As memoryByte
 End Structure
 
 Module cpu
@@ -70,6 +71,7 @@ Module cpu
 
     Private branchAddress As List(Of branchEvent)
     Public indirectJmpList As List(Of instJump)
+    Private taskConfig As memoryID
 
 
     Public Sub init()
@@ -126,50 +128,75 @@ Module cpu
     End Sub
 
     Public Sub setupForTask(t As taskToRun)
-        pc(0).currentValue = t.address And &HFF
-        pc(1).currentValue = t.address >> 8
+        pc(0).currentValue = t.memory.address And &HFF
+        pc(1).currentValue = t.memory.address >> 8
+        taskConfig = t.memory
     End Sub
 
     Public Sub run()
         Dim isRunning As Boolean = True
         'read instruction
+        Dim ops As List(Of memoryByte)
         Dim opCode As memoryByte
         Dim pcVal As UInt16
+        Dim lastCode As UInt32 = UInt32.MaxValue
+        Dim currentRealAddress As UInt32 = taskConfig.ID
+        opCode = readRealAddress(currentRealAddress, PrgByteType.CODE_HEAD)
         While isRunning
             pcVal = CInt(pc(1).currentValue) << 8 Or pc(0).currentValue
-            opCode = read(pcVal, PrgByteType.CODE_HEAD)
             If opCode.currentUsage = PrgByteType.LOCKED_DATA Then
                 isRunning = False
             Else
                 incPC()
-                isRunning = runOpCode(opCode, pcVal)
+                isRunning = runOpCode(opCode, pcVal, currentRealAddress)
+                lastCode = opCode.source.ID
+            End If
+
+            If isRunning Then
+                ops = read(pcVal, PrgByteType.CODE_HEAD, taskConfig)
+                If ops.Count = 1 Then
+                    opCode = ops(0)
+                    currentRealAddress = opCode.source.ID
+                Else
+                    'multiple mappings, stop running
+                    isRunning = False
+                    'add to branch list to handle later
+                    For Each opCode In ops
+                        Dim b As branchEvent
+                        b.sourceID = lastCode
+                        b.target = pcVal
+                        b.opCode = opCode
+                    Next
+                End If
             End If
 
             While branchAddress.Count > 0 And Not isRunning
                 'handle possible branch that missed
                 Dim b As branchEvent = branchAddress(0)
                 branchAddress.RemoveAt(0)
-                opCode = read(b.target, PrgByteType.PEEK)
+                opCode = b.opCode
                 If Not opCode.known Then
                     isRunning = True
                     pc(1).currentValue = b.target >> 8
                     pc(0).currentValue = b.target And &HFF
-
+                    currentRealAddress = opCode.source.ID
+                    taskConfig = opCode.source
                     logBranch(b.target, b.sourceID)
                 End If
             End While
         End While
     End Sub
 
-    Private Function runOpCode(pOpCode As memoryByte, pAddress As UInt16) As Boolean
+    Private Function runOpCode(pOpCode As memoryByte, pAddress As UInt16, ByRef pRealAddress As UInt32) As Boolean
         Dim stillRunning As Boolean = True
         'get code len
         Dim l As Byte = getOpLen(pOpCode.currentValue)
         Dim i As Integer = 1
         Dim operand(1) As memoryByte
         While i < l
-            operand(i - 1) = read(CInt(pc(1).currentValue) << 8 Or pc(0).currentValue, PrgByteType.CODE_HEAD)
+            operand(i - 1) = readRealAddress(pRealAddress, PrgByteType.CODE_HEAD)
             incPC()
+            pRealAddress += 1
             i += 1
         End While
 
@@ -179,6 +206,7 @@ Module cpu
 
         Dim tRemarks As String = ""
         Dim tAddress As UInt16
+        Dim tAddressList As List(Of memoryByte)
         Dim tMemory As memoryByte
         Dim oInst As instruction
 
@@ -195,40 +223,56 @@ Module cpu
                 stillRunning = False
             Case "JSR"
                 tAddress = CInt(operand(1).currentValue) << 8 Or operand(0).currentValue
-                tMemory = read(tAddress, PrgByteType.PEEK)
-                addJSRTask(tAddress, tMemory.source.ID)
-                tRemarks = realAddressToHexStr(tMemory.source.ID)
+                tAddressList = read(tAddress, PrgByteType.PEEK, taskConfig)
+                For Each tMemory In tAddressList
+                    addJSRTask(tMemory.source)
+                    tRemarks = realAddressToHexStr(tMemory.source.ID)
+                Next
 
                 Dim tInst As New instSubroutine
                 tInst.restoreFlags = False
                 tInst.subAddress = tAddress
-                tInst.subRealAddress = tMemory.source.ID
                 oInst = tInst
             Case "JMP"
                 tAddress = CInt(operand(1).currentValue) << 8 Or operand(0).currentValue
-                tMemory = read(tAddress, PrgByteType.PEEK)
-
                 Dim tInst As New instJump
                 tInst.jumpToAddress = tAddress
-                tInst.jumpToRealAddress = tMemory.source.ID
                 If opTable(pOpCode.currentValue).mode = AddressingMode.ABSOLUTE Then
-                    If tMemory.known Then
-                        stillRunning = False
-                    Else
-                        pc(1).currentValue = operand(1).currentValue
-                        pc(0).currentValue = operand(0).currentValue
-                    End If
-                    tRemarks = realAddressToHexStr(tMemory.source.ID)
                     tInst.isIndirect = False
                 Else
                     tInst.isIndirect = True
-                    tInst.jumpToAddress = tAddress
                     'unknown jump target
                     'add to lsv
                     indirectJmpList.Add(tInst)
                     stillRunning = False
                 End If
                 oInst = tInst
+
+                tAddressList = read(tAddress, PrgByteType.PEEK, taskConfig)
+                If tAddressList.Count = 1 Then
+                    'single mapping
+                    tMemory = tAddressList(0)
+                    If tMemory.known Then
+                        stillRunning = False
+                    Else
+                        pc(1).currentValue = operand(1).currentValue
+                        pc(0).currentValue = operand(0).currentValue
+                        pRealAddress = tMemory.source.ID
+                    End If
+                    tRemarks = realAddressToHexStr(tMemory.source.ID)
+                Else
+                    'multiple mappings, stop execution
+                    stillRunning = False
+                    For Each tMemory In tAddressList
+                        If Not tMemory.known Then
+                            Dim b As branchEvent
+                            b.sourceID = pOpCode.source.ID
+                            b.target = tAddress
+                            b.opCode = tMemory
+                            branchAddress.Add(b)
+                        End If
+                    Next
+                End If
 
             Case "BRK"
                 addBRKTask(pOpCode.source)
@@ -604,7 +648,6 @@ Module cpu
         t.addrMode = m
         Select Case m
             Case AddressingMode.ZERO_PAGE
-                write(op0, pV)
                 v = read(op0, PrgByteType.PEEK)
                 remarks = getMemoryName(v.source)
                 t.address = op0
@@ -621,7 +664,6 @@ Module cpu
                 t.realAddress = v.source
             Case AddressingMode.ABSOLUTE
                 t.address = CInt(op1) << 8 Or op0
-                write(t.address, pV)
                 v = read(t.address, PrgByteType.PEEK)
                 remarks = getMemoryName(v.source)
                 t.realAddress = v.source

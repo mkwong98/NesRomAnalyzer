@@ -12,9 +12,7 @@ End Enum
 Structure taskToRun
     Public id As Integer
     Public type As TaskType
-    Public address As UInt16
-    Public realAddress As UInt32
-    Public mapperConfig As UInt64
+    Public memory As memoryID
     Public name As String
 End Structure
 
@@ -75,9 +73,9 @@ Module analyzer
     Private currentBlock As block
 
     Private fullCode As New List(Of instruction)
-    Private nmiAddress As UInt32
-    Private resetAddress As UInt32
-    Private brkAddress As UInt32 = UInt32.MaxValue
+    Private nmiAddress As New List(Of UInt32)
+    Private resetAddress As New List(Of UInt32)
+    Private brkAddress As New List(Of UInt32)
     Private hasBrk As Boolean = False
     Private brkTraced As Boolean = False
     Private traceTasksToRun As New List(Of traceTask)
@@ -91,7 +89,9 @@ Module analyzer
         lines.Clear()
         currentTask = 0
         fullCode.Clear()
-        brkAddress = UInt32.MaxValue
+        resetAddress.Clear()
+        nmiAddress.Clear()
+        brkAddress.Clear()
         hasBrk = False
         brkTraced = False
         traceTasksToRun.Clear()
@@ -111,32 +111,60 @@ Module analyzer
         End If
 
         console.init()
+        Dim enabledModes As New List(Of String)
+        For Each idx As Integer In frm.lstModes.SelectedIndices
+            enabledModes.Add(frm.lstModes.Items(idx).Text)
+        Next
+        rom.setEnabledModes(enabledModes)
 
-        currentTask = 0
+        For Each itm As ListViewItem In frm.lsvBanks.Items
+            Dim modeName As String = itm.SubItems(0).Text
+            Dim bankMappings As String = itm.SubItems(1).Text
+            rom.setBankMappings(modeName, bankMappings)
+        Next
+
 
         'add first 2 tasks
         Dim t As taskToRun
-        Dim m As memoryID
-        m.Type = MemoryType.INIT
-        m.ID = 0
-        t = initTaskForInterrupt(&HFFFC, m)
-        t.id = 0
-        t.type = TaskType.RESET
-        t.name = "RESET"
-        tasksToRun.Add(t)
+        Dim realAddressList As New List(Of memoryByte)
 
-        t = initTaskForInterrupt(&HFFFA, m)
-        t.id = 1
-        t.type = TaskType.NMI
-        t.name = "NMI"
-        tasksToRun.Add(t)
+        realAddressList = rom.getMappedMemoryBytes(&HFFFC, PrgByteType.INTERRUPT_VECTOR)
+        For Each mb As memoryByte In realAddressList
+            t = initTaskForInterrupt(mb.source, TaskType.RESET)
+            t.name = "RESET_" & t.id
+            tasksToRun.Add(t)
+        Next
+
+        realAddressList = rom.getMappedMemoryBytes(&HFFFA, PrgByteType.INTERRUPT_VECTOR)
+        For Each mb As memoryByte In realAddressList
+            t = initTaskForInterrupt(mb.source, TaskType.NMI)
+            t.name = "NMI_" & t.id
+            tasksToRun.Add(t)
+        Next
 
         'add indirect jump task
         Dim tt() As String = Split(frm.txtIndirectAddress.Text, ",")
         For Each a As String In tt
             If a <> "" Then
-                Dim tMemory As memoryByte = read(Convert.ToUInt16(a, 16), PrgByteType.PEEK)
-                addJSRTask(Convert.ToUInt16(a, 16), tMemory.source.ID)
+                realAddressList = rom.getMappedMemoryBytes(Convert.ToUInt16(a, 16), PrgByteType.PEEK)
+                For Each mb As memoryByte In realAddressList
+                    addJSRTask(mb.source)
+                Next
+            End If
+        Next
+
+        'add bank switching tasks
+        tt = Split(frm.txtSwitchBankPoints.Text, ",")
+        For Each a As String In tt
+            If a <> "" Then
+                Dim realAddress As memoryID
+                realAddress.bank = ""
+                realAddress.mode = ""
+                realAddress.mappedAddress = 0
+                realAddress.address = 0
+                realAddress.ID = Convert.ToUInt16(a, 32)
+                realAddress.Type = MemoryType.PRG_ROM
+                addJSRTask(realAddress)
             End If
         Next
 
@@ -146,21 +174,19 @@ Module analyzer
             If a <> "" Then
                 If InStr(a, "-") > 0 Then
                     Dim parts() As String = Split(a, "-")
-                    Dim startAddress As UInt16 = Convert.ToUInt16(parts(0), 16)
-                    Dim endAddress As UInt16 = Convert.ToUInt16(parts(1), 16)
-                    For addr As UInt16 = startAddress To endAddress
-                        rom.readAddress(addr, PrgByteType.LOCKED_DATA)
+                    Dim startAddress As UInt32 = Convert.ToUInt32(parts(0), 16)
+                    Dim endAddress As UInt32 = Convert.ToUInt32(parts(1), 16)
+                    For addr As UInt32 = startAddress To endAddress
+                        rom.setMemmoryByteUsage(addr, PrgByteType.LOCKED_DATA)
                     Next
                 Else
-                    rom.readAddress(Convert.ToUInt16(a, 16), PrgByteType.LOCKED_DATA)
+                    rom.setMemmoryByteUsage(Convert.ToUInt16(a, 16), PrgByteType.LOCKED_DATA)
                 End If
-                Dim tMemory As memoryByte = read(Convert.ToUInt16(a, 16), PrgByteType.PEEK)
-                addJSRTask(Convert.ToUInt16(a, 16), tMemory.source.ID)
             End If
         Next
 
         Dim i As ListViewItem
-
+        currentTask = 0
         While currentTask < tasksToRun.Count
             'set up
             t = tasksToRun(currentTask)
@@ -173,21 +199,21 @@ Module analyzer
                 Case TaskType.RESET
                     i.Text = "RES"
                     currentBlock.type = BlockType.RESET
-                    resetAddress = t.realAddress
+                    resetAddress.Add(t.memory.ID)
                 Case TaskType.NMI
                     i.Text = "NMI"
                     currentBlock.type = BlockType.NMI
-                    nmiAddress = t.realAddress
+                    nmiAddress.Add(t.memory.ID)
                 Case TaskType.BRK
                     i.Text = "BRK"
                     currentBlock.type = BlockType.BRK
-                    brkAddress = t.realAddress
+                    brkAddress.Add(t.memory.ID)
                     hasBrk = True
                 Case TaskType.JSR
                     i.Text = "SUB"
                     currentBlock.type = BlockType.SUBROUNTINE
             End Select
-            i.Text = i.Text & " " & Hex(t.realAddress)
+            i.Text = i.Text & " " & Hex(t.memory.ID)
 
             tasksToRun(currentTask) = t
             'start running
@@ -221,12 +247,16 @@ Module analyzer
     End Sub
 
     Public Sub startIndirect()
+        Dim realAddressList As New List(Of memoryByte)
+
         currentTask = tasksToRun.Count
         Dim indirectCount As Integer = indirectJmpList.Count
         For Each inst As instJump In indirectJmpList
             For Each tAddress As UInt16 In inst.indirectJumpTargets
-                Dim tMemory As memoryByte = read(tAddress, PrgByteType.PEEK)
-                addJSRTask(tAddress, tMemory.source.ID)
+                realAddressList = rom.getMappedMemoryBytes(Convert.ToUInt16(tAddress, 16), PrgByteType.PEEK)
+                For Each mb As memoryByte In realAddressList
+                    addJSRTask(mb.source)
+                Next
             Next
         Next
 
@@ -240,7 +270,7 @@ Module analyzer
             lines.Add(currentBlock)
             i.Text = "SUB"
             currentBlock.type = BlockType.SUBROUNTINE
-            i.Text = i.Text & " " & Hex(t.realAddress)
+            i.Text = i.Text & " " & Hex(t.memory.ID)
 
             tasksToRun(currentTask) = t
             'start running
@@ -289,40 +319,36 @@ Module analyzer
 
 
 
-    Public Sub addJSRTask(pAddress As UInt16, pRealAddress As UInt32)
+    Public Sub addJSRTask(pM As memoryID)
         Dim t As taskToRun
         t.id = tasksToRun.Count
         t.type = TaskType.JSR
-        t.address = pAddress
-        t.realAddress = pRealAddress
-        t.mapperConfig = getMapperConfig()
-        t.name = "SUB_" & realAddressToHexStr(t.realAddress)
+        t.memory = pM
+        t.name = "SUB_" & realAddressToHexStr(pM.ID)
         If Not taskIsDuplicate(t) Then
             tasksToRun.Add(t)
         End If
     End Sub
 
     Public Sub addBRKTask(pSource As memoryID)
-        Dim t As taskToRun = initTaskForInterrupt(&HFFFE, pSource)
-        t.type = TaskType.BRK
+        Dim t As taskToRun = initTaskForInterrupt(pSource, TaskType.BRK)
         t.name = "BRK"
         If Not taskIsDuplicate(t) Then
             tasksToRun.Add(t)
         End If
     End Sub
 
-    Public Function initTaskForInterrupt(pAddress As UInt16, pSource As memoryID) As taskToRun
+    Public Function initTaskForInterrupt(pM As memoryID, pType As TaskType) As taskToRun
         Dim t As taskToRun
         t.id = tasksToRun.Count
-        t.address = readAsAddress(pAddress, PrgByteType.INTERRUPT_VECTOR)
-        t.realAddress = read(t.address, PrgByteType.PEEK).source.ID
-        t.mapperConfig = getMapperConfig()
+        t.type = pType
+        t.memory = pM
         Return t
     End Function
 
     Public Function taskIsDuplicate(task As taskToRun) As Boolean
         For Each t As taskToRun In tasksToRun
-            If t.realAddress = task.realAddress Then
+            If t.memory.ID = task.memory.ID Then
                 Return True
             End If
         Next
