@@ -27,7 +27,8 @@
                 useFlag = FlagID.z
         End Select
         flagIsSet = CBool(s(3))
-        branchToAddress = Convert.ToUInt32(s(4), 16)
+        branchToAddress.Clear()
+        branchToAddress.AddRange(hexStrToRealAddressList(s(4)))
     End Sub
 
     Public Overrides Function getRequiredMemoryTarget() As List(Of memoryTarget)
@@ -58,7 +59,7 @@
             Case FlagID.z
                 s &= "Z"
         End Select
-        s &= ";" & flagIsSet.ToString & ";" & realAddressToHexStr(branchToAddress)
+        s &= ";" & flagIsSet.ToString & ";" & realAddressListToHexStr(branchToAddress)
         Return s
     End Function
 

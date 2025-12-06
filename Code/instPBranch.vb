@@ -3,6 +3,6 @@
 
     Public useFlag As FlagID
     Public flagIsSet As Boolean
-    Public branchToAddress As UInt32
+    Public branchToAddress As New List(Of UInt32)
 
 End Class

@@ -71,70 +71,26 @@
         modes.Add(m)
     End Sub
 
-    Public Overrides Function getActualAddress(address As UShort) As List(Of memoryID)
+    Public Overrides Function getActualAddress(address As UShort, config As bankConfig) As List(Of memoryID)
         Dim result As New List(Of memoryID)
-        For Each m As mode In modes
-            If m.enabled Then
-                For Each b As bankRange In banks
-                    If b.mode = m.name Then
-                        If address >= b.startBank And address < b.startBank + b.size Then
-                            For Each mappedAddress As UInt32 In b.mappedAddresses
-                                Dim r As memoryID
-                                r.Type = MemoryType.PRG_ROM
-                                r.ID = mappedAddress + (address - b.startBank)
-                                r.mode = m.name
-                                r.bank = b.name
-                                r.mappedAddress = mappedAddress
-                                r.address = address
-                                result.Add(r)
-                            Next
-                        End If
-                    End If
-                Next
-
-                For Each b As bankRange In fixedBanks
-                    If b.mode = m.name Then
-                        If address >= b.startBank And address < b.startBank + b.size Then
-                            For Each mappedAddress As UInt32 In b.mappedAddresses
-                                Dim r As memoryID
-                                r.Type = MemoryType.PRG_ROM
-                                r.ID = mappedAddress + (address - b.startBank)
-                                r.mode = m.name
-                                r.bank = b.name
-                                r.mappedAddress = mappedAddress
-                                r.address = address
-                                result.Add(r)
-                            Next
-                        End If
-                    End If
-                Next
-            End If
-        Next
-        Return result
-    End Function
-
-    Public Overrides Function getActualAddressWithConfig(address As UShort, config As memoryID) As List(Of memoryID)
-        Dim result As New List(Of memoryID)
-        If config.mode = "" Then
-            Return getActualAddress(address)
-        End If
         For Each m As mode In modes
             'must be the same mode as in config
-            If m.enabled And m.name = config.mode Then
+            If m.enabled And ((m.name = config.mode) Or Not config.inUse) Then
                 For Each b As bankRange In banks
                     If b.mode = m.name Then
                         If address >= b.startBank And address < b.startBank + b.size Then
                             For Each mappedAddress As UInt32 In b.mappedAddresses
                                 'either same bank and mapped address, or different bank and any mapped address
-                                If b.name = config.bank And mappedAddress <> config.mappedAddress Then
+                                If b.name = config.bank And mappedAddress <> config.mappedAddress And config.inUse Then
                                     Continue For
                                 End If
                                 Dim r As memoryID
                                 r.Type = MemoryType.PRG_ROM
                                 r.ID = mappedAddress + (address - b.startBank)
-                                r.mode = m.name
-                                r.bank = b.name
-                                r.mappedAddress = mappedAddress
+                                r.config.inUse = True
+                                r.config.mode = m.name
+                                r.config.bank = b.name
+                                r.config.mappedAddress = mappedAddress
                                 r.address = address
                                 result.Add(r)
                             Next
@@ -147,15 +103,16 @@
                         If address >= b.startBank And address < b.startBank + b.size Then
                             For Each mappedAddress As UInt32 In b.mappedAddresses
                                 'either same bank and mapped address, or different bank and any mapped address
-                                If b.name = config.bank And mappedAddress <> config.mappedAddress Then
+                                If b.name = config.bank And mappedAddress <> config.mappedAddress And config.inUse Then
                                     Continue For
                                 End If
                                 Dim r As memoryID
                                 r.Type = MemoryType.PRG_ROM
                                 r.ID = mappedAddress + (address - b.startBank)
-                                r.mode = m.name
-                                r.bank = b.name
-                                r.mappedAddress = mappedAddress
+                                r.config.inUse = True
+                                r.config.mode = m.name
+                                r.config.bank = b.name
+                                r.config.mappedAddress = mappedAddress
                                 r.address = address
                                 result.Add(r)
                             Next

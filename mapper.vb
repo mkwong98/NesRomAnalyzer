@@ -11,14 +11,19 @@ Public Structure bankRange
     Public mappedAddresses As List(Of UInt32)
 End Structure
 
+Public Structure bankConfig
+    Public inUse As Boolean
+    Public mode As String
+    Public bank As String
+    Public mappedAddress As UInt32
+End Structure
+
 Public MustInherit Class mapper
     Public modes As List(Of mode) = New List(Of mode)
     Public banks As List(Of bankRange) = New List(Of bankRange)
     Public fixedBanks As List(Of bankRange) = New List(Of bankRange)
 
-    Public MustOverride Function getActualAddress(address As UInt16) As List(Of memoryID)
-
-    Public MustOverride Function getActualAddressWithConfig(address As UInt16, config As memoryID) As List(Of memoryID)
+    Public MustOverride Function getActualAddress(address As UInt16, config As bankConfig) As List(Of memoryID)
 
     Public MustOverride Sub setMemorySize(type As MemoryType, size As UInt32)
 

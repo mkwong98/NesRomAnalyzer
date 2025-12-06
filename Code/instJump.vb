@@ -13,7 +13,8 @@
 
     Public Overrides Sub loadInstructionContentFromString(ByRef r As String)
         Dim s() As String = r.Split(";"c)
-        readRealJumpTargetString(s(0))
+        jumpToRealAddress.Clear()
+        jumpToRealAddress.AddRange(hexStrToRealAddressList(s(0)))
         jumpToAddress = Convert.ToUInt16(s(1), 16)
         isIndirect = CBool(s(2))
         If s.Length > 3 Then
@@ -37,7 +38,7 @@
     End Function
 
     Public Overrides Function saveInstructionContentToString() As String
-        Return getRealJumpTargetString() & ";" & addressToHexStr(jumpToAddress) & ";" & isIndirect.ToString & ";" & getIndirectJumpTargetString() & ";"
+        Return realAddressListToHexStr(jumpToRealAddress) & ";" & addressToHexStr(jumpToAddress) & ";" & isIndirect.ToString & ";" & getIndirectJumpTargetString() & ";"
     End Function
 
     Public Function getIndirectJumpTargetString() As String
@@ -51,33 +52,12 @@
         Return r
     End Function
 
-    Public Function getRealJumpTargetString() As String
-        Dim r As String = ""
-        For Each a As UInt32 In jumpToRealAddress
-            If r <> "" Then
-                r = r & ","
-            End If
-            r = r & realAddressToHexStr(a)
-        Next
-        Return r
-    End Function
-
     Public Sub readIndirectJumpTargetString(r As String)
         indirectJumpTargets.Clear()
         Dim t() As String = Split(r, ",")
         For Each a As String In t
             If a <> "" Then
                 indirectJumpTargets.Add(Convert.ToUInt16(a, 16))
-            End If
-        Next
-    End Sub
-
-    Public Sub readRealJumpTargetString(r As String)
-        jumpToRealAddress.Clear()
-        Dim t() As String = Split(r, ",")
-        For Each a As String In t
-            If a <> "" Then
-                jumpToRealAddress.Add(Convert.ToUInt32(a, 16))
             End If
         Next
     End Sub

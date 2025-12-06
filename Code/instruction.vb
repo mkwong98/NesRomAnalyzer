@@ -18,6 +18,7 @@ Public Enum InstructionType
     REPEATED_MODIFY
     JUMP_BLOCK
     BREAK_LOOP
+    BRK
 End Enum
 
 Public MustInherit Class instruction

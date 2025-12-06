@@ -4,7 +4,7 @@
     Private prgROMLarge As Boolean
     Private prgRAMSize As UInt32
 
-    Public Overrides Function getActualAddress(address As UShort) As List(Of memoryID)
+    Public Overrides Function getActualAddress(address As UShort, config As bankConfig) As List(Of memoryID)
         Return New List(Of memoryID)
     End Function
 

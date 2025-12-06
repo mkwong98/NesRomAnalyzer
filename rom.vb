@@ -204,24 +204,6 @@ Module rom
         Return prgLOG(pAddress) <> PrgByteType.UNKNOWN
     End Function
 
-    Public Function getMappedMemoryBytes(pAddress As UInt16, pReadType As PrgByteType) As List(Of memoryByte)
-        Dim result As New List(Of memoryByte)
-        Dim realAddresses As List(Of memoryID) = objMapper.getActualAddress(pAddress)
-        For Each addr As memoryID In realAddresses
-            Dim mb As memoryByte
-            mb.source = addr
-            If addr.Type = MemoryType.PRG_ROM Then
-                mb.known = addressKnown(addr.ID)
-                mb.currentValue = prgROM(addr.ID)
-                mb.unchanged = True
-                mb.currentUsage = prgLOG(addr.ID)
-                setMemmoryByteUsage(addr.ID, pReadType)
-            End If
-            result.Add(mb)
-        Next
-        Return result
-    End Function
-
     Public Sub setMemmoryByteUsage(pAddress As UInt32, pReadType As PrgByteType)
         If (pReadType <> PrgByteType.PEEK And (prgLOG(pAddress) = PrgByteType.UNKNOWN) _
                 Or (prgLOG(pAddress) <> PrgByteType.CODE_HEAD And prgLOG(pAddress) <> PrgByteType.LOCKED_DATA And pReadType = PrgByteType.CODE_HEAD)) Then
@@ -229,9 +211,9 @@ Module rom
         End If
     End Sub
 
-    Public Function getMappedMemoryBytesWithConfig(pAddress As UInt16, pReadType As PrgByteType, pConfig As memoryID) As List(Of memoryByte)
+    Public Function getMappedMemoryBytes(pAddress As UInt16, pReadType As PrgByteType, pConfig As bankConfig) As List(Of memoryByte)
         Dim result As New List(Of memoryByte)
-        Dim realAddresses As List(Of memoryID) = objMapper.getActualAddressWithConfig(pAddress, pConfig)
+        Dim realAddresses As List(Of memoryID) = objMapper.getActualAddress(pAddress, pConfig)
         For Each addr As memoryID In realAddresses
             Dim mb As memoryByte
             mb.source = addr

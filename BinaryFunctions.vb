@@ -35,4 +35,26 @@
     Public Function realAddressToHexStr(a As UInt32) As String
         Return a.ToString("X6")
     End Function
+
+    Public Function realAddressListToHexStr(l As List(Of UInt32)) As String
+        Dim r As String = ""
+        For Each a As UInt32 In l
+            If r <> "" Then
+                r = r & ","
+            End If
+            r = r & realAddressToHexStr(a)
+        Next
+        Return r
+    End Function
+
+    Public Function hexStrToRealAddressList(s As String) As List(Of UInt32)
+        Dim r As New List(Of UInt32)
+        Dim t() As String = Split(s, ",")
+        For Each a As String In t
+            If a <> "" Then
+                r.Add(Convert.ToUInt32(a, 16))
+            End If
+        Next
+        Return r
+    End Function
 End Module

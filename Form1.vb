@@ -60,21 +60,21 @@ Public Class frmMain
     End Sub
 
     Private Sub btnLoadAna_Click(sender As Object, e As EventArgs) Handles btnLoadAna.Click
-        If ofdAnaFile.ShowDialog = DialogResult.OK Then
-            Dim fs = My.Computer.FileSystem.OpenTextFileReader(ofdAnaFile.FileName)
-            txtAnaCode.Text = fs.ReadToEnd()
-            fs.Close()
-            analyzer.loadBlocksFromString(txtAnaCode.Text)
-            console.init()
-        End If
+        'If ofdAnaFile.ShowDialog = DialogResult.OK Then
+        '    Dim fs = My.Computer.FileSystem.OpenTextFileReader(ofdAnaFile.FileName)
+        '    txtAnaCode.Text = fs.ReadToEnd()
+        '    fs.Close()
+        '    analyzer.loadBlocksFromString(txtAnaCode.Text)
+        '    console.init()
+        'End If
     End Sub
 
     Private Sub btnAnalyse_Click(sender As Object, e As EventArgs) Handles btnAnalyse.Click
-        analyse()
+        'analyse()
     End Sub
 
     Private Sub btnGenerate_Click(sender As Object, e As EventArgs) Handles btnGenerate.Click
-        generate()
+        'generate()
     End Sub
 
     Private Sub lsvIndirectJmp_ItemSelectionChanged(sender As Object, e As ListViewItemSelectionChangedEventArgs) Handles lsvIndirectJmp.ItemSelectionChanged

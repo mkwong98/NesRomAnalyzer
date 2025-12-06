@@ -19,10 +19,8 @@ End Enum
 Public Structure memoryID
     Public Type As MemoryType
     Public ID As UInt32
-    Public mode As String
-    Public bank As String
-    Public mappedAddress As UInt32
     Public address As UInt16
+    Public config As bankConfig
 End Structure
 
 
@@ -36,7 +34,7 @@ End Structure
 
 Module memory
 
-    Public Function read(pAddress As UInt16, pUsage As PrgByteType, pConfig As memoryID) As List(Of memoryByte)
+    Public Function read(pAddress As UInt16, pUsage As PrgByteType, pConfig As bankConfig) As List(Of memoryByte)
         Dim result As New List(Of memoryByte)
         Dim tMem As memoryByte
         If pAddress < &H2000 Then
@@ -59,17 +57,20 @@ Module memory
             tMem.unchanged = False
             result.Add(tMem)
         Else
-            result = getMappedMemoryBytesWithConfig(pAddress, pUsage, pConfig)
+            result = getMappedMemoryBytes(pAddress, pUsage, pConfig)
         End If
         Return result
     End Function
 
-    Public Function readAsAddress(pAddress As UInt16, pUsage As PrgByteType, pConfig As memoryID) As List(Of UInt16)
-        Dim result As New List(Of UInt16)
+    Public Function readAsAddress(pAddress As UInt16, pUsage As PrgByteType, pConfig As bankConfig) As List(Of memoryID)
+        Dim result As New List(Of memoryID)
         Dim tMem As List(Of memoryByte) = read(pAddress, pUsage, pConfig)
+        Dim tMB As memoryID
         For Each mb As memoryByte In tMem
             Dim val As Byte = rom.prgROM(mb.source.ID + 1)
-            result.Add(CInt(val) << 8 Or mb.currentValue)
+            tMB = mb.source
+            tMB.address = CInt(val) << 8 Or mb.currentValue
+            result.Add(tMB)
         Next
         Return result
     End Function

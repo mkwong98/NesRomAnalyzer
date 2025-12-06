@@ -4,12 +4,10 @@
     Private prgROMLarge As Boolean
     Private prgRAMSize As UInt32
 
-    Public Overrides Function getActualAddress(address As UShort) As List(Of memoryID)
+    Public Overrides Function getActualAddress(address As UShort, config As bankConfig) As List(Of memoryID)
         Dim result As New List(Of memoryID)
         Dim realAddress As memoryID
-        realAddress.bank = ""
-        realAddress.mode = ""
-        realAddress.mappedAddress = 0
+        realAddress.config.inUse = False
         If address >= &H8000 Then
             realAddress.Type = MemoryType.PRG_ROM
             If prgROMLarge Then
@@ -25,10 +23,6 @@
         End If
         result.Add(realAddress)
         Return result
-    End Function
-
-    Public Overrides Function getActualAddressWithConfig(address As UInt16, config As memoryID) As List(Of memoryID)
-        Return getActualAddress(address)
     End Function
 
     Public Overrides Sub setMemorySize(type As MemoryType, size As UInt32)

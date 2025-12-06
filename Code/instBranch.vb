@@ -44,7 +44,8 @@
                 useFlag = FlagID.z
         End Select
         flagIsSet = CBool(s(1))
-        branchToAddress = Convert.ToUInt32(s(2), 16)
+        branchToAddress.Clear()
+        branchToAddress.AddRange(hexStrToRealAddressList(s(2)))
     End Sub
 
     Public Overrides Function saveInstructionContentToString() As String
@@ -63,7 +64,7 @@
             Case FlagID.z
                 s &= "Z"
         End Select
-        s &= ";" & flagIsSet.ToString & ";" & realAddressToHexStr(branchToAddress)
+        s &= ";" & flagIsSet.ToString & ";" & realAddressListToHexStr(branchToAddress)
         Return s
     End Function
 
