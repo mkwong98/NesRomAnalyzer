@@ -194,6 +194,10 @@ Public MustInherit Class instruction
         flgNegativeChange = s.Substring(i + 2, 1) = "T"
         i = s.IndexOf("JUMP=")
         isJumpTarget = s.Substring(i + 5, 1) = "T"
+        i = s.IndexOf("CONFIG=")
+        config = s.Substring(i + 2)
+        i = s.IndexOf("ADDRESS=")
+        config = Convert.ToUInt32(s.Substring(i + 2), 16)
     End Sub
 
     Public Overrides Function saveToString() As String
@@ -244,7 +248,9 @@ Public MustInherit Class instruction
         r &= "D=" & flgDecimalChange.ToString & ", "
         r &= "V=" & flgOverflowChange.ToString & ", "
         r &= "N=" & flgNegativeChange.ToString & ", "
-        r &= "JUMP=" & isJumpTarget.ToString & vbCrLf
+        r &= "JUMP=" & isJumpTarget.ToString & ", "
+        r &= "CONFIG=" & config & ", "
+        r &= "ADDRESS=" & addressToHexStr(address) & vbCrLf
 
         Return r
     End Function

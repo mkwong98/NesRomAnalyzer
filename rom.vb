@@ -211,10 +211,10 @@ Module rom
         End If
     End Sub
 
-    Public Function getMappedMemoryBytes(pAddress As UInt16, pReadType As PrgByteType, pConfig As bankConfig) As List(Of memoryByte)
+    Public Function getMappedMemoryBytes(pAddress As UInt16, pReadType As PrgByteType, pConfig As String) As List(Of memoryByte)
         Dim result As New List(Of memoryByte)
-        Dim realAddresses As List(Of memoryID) = objMapper.getActualAddress(pAddress, pConfig)
-        For Each addr As memoryID In realAddresses
+        Dim addrs As List(Of memoryID) = objMapper.getActualAddress(pAddress, pConfig)
+        For Each addr As memoryID In addrs
             Dim mb As memoryByte
             mb.source = addr
             If addr.Type = MemoryType.PRG_ROM Then
@@ -254,15 +254,17 @@ Module rom
         Return objMapper.banks
     End Function
 
-    Public Function getModes() As List(Of mode)
+    Public Function getModes() As List(Of String)
         Return objMapper.modes
     End Function
 
-    Public Sub setEnabledModes(pModeNames As List(Of String))
-        objMapper.setEnabledModes(pModeNames)
-    End Sub
+    Public Function getDefaultBankConfig() As String
+        Return objMapper.getDefaultMapping()
+    End Function
 
-    Public Sub setBankMappings(pModeName As String, pBankMappings As String)
-        objMapper.setBankMappings(pModeName, pBankMappings)
-    End Sub
+    Public Function switchBank(fullMappings As String, newMapping As List(Of bankMapping)) As String
+        Return objMapper.switchBank(fullMappings, newMapping)
+    End Function
+
+
 End Module

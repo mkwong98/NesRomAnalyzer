@@ -10,6 +10,7 @@
     Public Sub New()
         type = InstructionType.SUBROUTINE
         hasReturned = False
+        subRealAddress = New List(Of UInt32)
     End Sub
 
     Public Overrides Sub loadInstructionContentFromString(ByRef r As String)

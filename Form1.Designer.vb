@@ -29,8 +29,16 @@ Partial Class frmMain
         btnProcess = New Button()
         TabControl1 = New TabControl()
         TabPage1 = New TabPage()
-        Label8 = New Label()
-        lstModes = New ListBox()
+        txtMappingActivation = New TextBox()
+        txtMappingSet = New TextBox()
+        Label11 = New Label()
+        Label10 = New Label()
+        btnMappingActivationRemove = New Button()
+        btnMappingActivationAdd = New Button()
+        lsvMappingActivation = New ListView()
+        ColumnHeader11 = New ColumnHeader()
+        ColumnHeader13 = New ColumnHeader()
+        Label9 = New Label()
         Label7 = New Label()
         btnRemoveMapping = New Button()
         btnAddMapping = New Button()
@@ -38,6 +46,7 @@ Partial Class frmMain
         lsvBanks = New ListView()
         ColumnHeader9 = New ColumnHeader()
         ColumnHeader10 = New ColumnHeader()
+        ColumnHeader14 = New ColumnHeader()
         Label6 = New Label()
         Label5 = New Label()
         btnRunIndirect = New Button()
@@ -77,8 +86,6 @@ Partial Class frmMain
         txtIndirectAddress = New TextBox()
         Label4 = New Label()
         txtDataRange = New TextBox()
-        Label9 = New Label()
-        txtSwitchBankPoints = New TextBox()
         TabControl1.SuspendLayout()
         TabPage1.SuspendLayout()
         TabPage2.SuspendLayout()
@@ -99,13 +106,13 @@ Partial Class frmMain
         txtFilePath.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
         txtFilePath.Location = New Point(74, 7)
         txtFilePath.Name = "txtFilePath"
-        txtFilePath.Size = New Size(967, 23)
+        txtFilePath.Size = New Size(1160, 23)
         txtFilePath.TabIndex = 1
         ' 
         ' btnFilePicker
         ' 
         btnFilePicker.Anchor = AnchorStyles.Top Or AnchorStyles.Right
-        btnFilePicker.Location = New Point(1040, 7)
+        btnFilePicker.Location = New Point(1233, 7)
         btnFilePicker.Name = "btnFilePicker"
         btnFilePicker.Size = New Size(30, 24)
         btnFilePicker.TabIndex = 2
@@ -119,9 +126,9 @@ Partial Class frmMain
         ' btnProcess
         ' 
         btnProcess.Anchor = AnchorStyles.Top Or AnchorStyles.Right
-        btnProcess.Location = New Point(1076, 7)
+        btnProcess.Location = New Point(1269, 7)
         btnProcess.Name = "btnProcess"
-        btnProcess.Size = New Size(95, 111)
+        btnProcess.Size = New Size(95, 81)
         btnProcess.TabIndex = 6
         btnProcess.Text = "Process"
         btnProcess.UseVisualStyleBackColor = True
@@ -132,16 +139,22 @@ Partial Class frmMain
         TabControl1.Controls.Add(TabPage1)
         TabControl1.Controls.Add(TabPage2)
         TabControl1.Controls.Add(TabPage3)
-        TabControl1.Location = New Point(8, 121)
+        TabControl1.Location = New Point(8, 94)
         TabControl1.Name = "TabControl1"
         TabControl1.SelectedIndex = 0
-        TabControl1.Size = New Size(1163, 458)
+        TabControl1.Size = New Size(1356, 565)
         TabControl1.TabIndex = 7
         ' 
         ' TabPage1
         ' 
-        TabPage1.Controls.Add(Label8)
-        TabPage1.Controls.Add(lstModes)
+        TabPage1.Controls.Add(txtMappingActivation)
+        TabPage1.Controls.Add(txtMappingSet)
+        TabPage1.Controls.Add(Label11)
+        TabPage1.Controls.Add(Label10)
+        TabPage1.Controls.Add(btnMappingActivationRemove)
+        TabPage1.Controls.Add(btnMappingActivationAdd)
+        TabPage1.Controls.Add(lsvMappingActivation)
+        TabPage1.Controls.Add(Label9)
         TabPage1.Controls.Add(Label7)
         TabPage1.Controls.Add(btnRemoveMapping)
         TabPage1.Controls.Add(btnAddMapping)
@@ -160,33 +173,101 @@ Partial Class frmMain
         TabPage1.Location = New Point(4, 24)
         TabPage1.Name = "TabPage1"
         TabPage1.Padding = New Padding(3)
-        TabPage1.Size = New Size(1155, 430)
+        TabPage1.Size = New Size(1348, 537)
         TabPage1.TabIndex = 0
         TabPage1.Text = "Basic disassembly"
         TabPage1.UseVisualStyleBackColor = True
         ' 
-        ' Label8
+        ' txtMappingActivation
         ' 
-        Label8.Location = New Point(6, 8)
-        Label8.Name = "Label8"
-        Label8.Size = New Size(67, 60)
-        Label8.TabIndex = 23
-        Label8.Text = "Switching mode"
+        txtMappingActivation.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
+        txtMappingActivation.Location = New Point(72, 440)
+        txtMappingActivation.Name = "txtMappingActivation"
+        txtMappingActivation.Size = New Size(248, 23)
+        txtMappingActivation.TabIndex = 14
         ' 
-        ' lstModes
+        ' txtMappingSet
         ' 
-        lstModes.FormattingEnabled = True
-        lstModes.ItemHeight = 15
-        lstModes.Location = New Point(79, 6)
-        lstModes.Name = "lstModes"
-        lstModes.SelectionMode = SelectionMode.MultiExtended
-        lstModes.Size = New Size(237, 79)
-        lstModes.TabIndex = 8
+        txtMappingSet.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
+        txtMappingSet.Location = New Point(72, 469)
+        txtMappingSet.Name = "txtMappingSet"
+        txtMappingSet.Size = New Size(248, 23)
+        txtMappingSet.TabIndex = 15
+        ' 
+        ' Label11
+        ' 
+        Label11.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
+        Label11.AutoSize = True
+        Label11.Location = New Point(9, 472)
+        Label11.Name = "Label11"
+        Label11.Size = New Size(25, 15)
+        Label11.TabIndex = 30
+        Label11.Text = "Set"
+        ' 
+        ' Label10
+        ' 
+        Label10.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
+        Label10.AutoSize = True
+        Label10.Location = New Point(6, 443)
+        Label10.Name = "Label10"
+        Label10.Size = New Size(60, 15)
+        Label10.TabIndex = 28
+        Label10.Text = "Mapping"
+        ' 
+        ' btnMappingActivationRemove
+        ' 
+        btnMappingActivationRemove.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
+        btnMappingActivationRemove.Location = New Point(246, 499)
+        btnMappingActivationRemove.Name = "btnMappingActivationRemove"
+        btnMappingActivationRemove.Size = New Size(74, 27)
+        btnMappingActivationRemove.TabIndex = 18
+        btnMappingActivationRemove.Text = "Remove"
+        btnMappingActivationRemove.UseVisualStyleBackColor = True
+        ' 
+        ' btnMappingActivationAdd
+        ' 
+        btnMappingActivationAdd.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
+        btnMappingActivationAdd.Location = New Point(166, 498)
+        btnMappingActivationAdd.Name = "btnMappingActivationAdd"
+        btnMappingActivationAdd.Size = New Size(74, 27)
+        btnMappingActivationAdd.TabIndex = 17
+        btnMappingActivationAdd.Text = "Add"
+        btnMappingActivationAdd.UseVisualStyleBackColor = True
+        ' 
+        ' lsvMappingActivation
+        ' 
+        lsvMappingActivation.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left
+        lsvMappingActivation.Columns.AddRange(New ColumnHeader() {ColumnHeader11, ColumnHeader13})
+        lsvMappingActivation.Location = New Point(6, 230)
+        lsvMappingActivation.Name = "lsvMappingActivation"
+        lsvMappingActivation.Size = New Size(314, 204)
+        lsvMappingActivation.TabIndex = 13
+        lsvMappingActivation.UseCompatibleStateImageBehavior = False
+        lsvMappingActivation.View = View.Details
+        ' 
+        ' ColumnHeader11
+        ' 
+        ColumnHeader11.Text = "Mapping"
+        ColumnHeader11.Width = 200
+        ' 
+        ' ColumnHeader13
+        ' 
+        ColumnHeader13.Text = "Set"
+        ColumnHeader13.Width = 80
+        ' 
+        ' Label9
+        ' 
+        Label9.AutoSize = True
+        Label9.Location = New Point(6, 212)
+        Label9.Name = "Label9"
+        Label9.Size = New Size(118, 15)
+        Label9.TabIndex = 24
+        Label9.Text = "Mapping activation"
         ' 
         ' Label7
         ' 
         Label7.AutoSize = True
-        Label7.Location = New Point(218, 88)
+        Label7.Location = New Point(434, 8)
         Label7.Name = "Label7"
         Label7.Size = New Size(60, 15)
         Label7.TabIndex = 21
@@ -194,7 +275,7 @@ Partial Class frmMain
         ' 
         ' btnRemoveMapping
         ' 
-        btnRemoveMapping.Location = New Point(218, 222)
+        btnRemoveMapping.Location = New Point(538, 172)
         btnRemoveMapping.Name = "btnRemoveMapping"
         btnRemoveMapping.Size = New Size(98, 27)
         btnRemoveMapping.TabIndex = 12
@@ -203,7 +284,7 @@ Partial Class frmMain
         ' 
         ' btnAddMapping
         ' 
-        btnAddMapping.Location = New Point(218, 189)
+        btnAddMapping.Location = New Point(434, 172)
         btnAddMapping.Name = "btnAddMapping"
         btnAddMapping.Size = New Size(98, 27)
         btnAddMapping.TabIndex = 11
@@ -214,18 +295,18 @@ Partial Class frmMain
         ' 
         cboMapToAddress.DropDownStyle = ComboBoxStyle.Simple
         cboMapToAddress.FormattingEnabled = True
-        cboMapToAddress.Location = New Point(218, 106)
+        cboMapToAddress.Location = New Point(434, 26)
         cboMapToAddress.Name = "cboMapToAddress"
-        cboMapToAddress.Size = New Size(98, 77)
+        cboMapToAddress.Size = New Size(202, 137)
         cboMapToAddress.TabIndex = 10
         ' 
         ' lsvBanks
         ' 
-        lsvBanks.Columns.AddRange(New ColumnHeader() {ColumnHeader9, ColumnHeader10})
+        lsvBanks.Columns.AddRange(New ColumnHeader() {ColumnHeader9, ColumnHeader10, ColumnHeader14})
         lsvBanks.FullRowSelect = True
-        lsvBanks.Location = New Point(6, 106)
+        lsvBanks.Location = New Point(6, 26)
         lsvBanks.Name = "lsvBanks"
-        lsvBanks.Size = New Size(206, 143)
+        lsvBanks.Size = New Size(422, 175)
         lsvBanks.TabIndex = 9
         lsvBanks.UseCompatibleStateImageBehavior = False
         lsvBanks.View = View.Details
@@ -240,10 +321,14 @@ Partial Class frmMain
         ColumnHeader10.Text = "Bank size (KB)"
         ColumnHeader10.Width = 100
         ' 
+        ' ColumnHeader14
+        ' 
+        ColumnHeader14.Text = "Bank ID"
+        ' 
         ' Label6
         ' 
         Label6.AutoSize = True
-        Label6.Location = New Point(6, 88)
+        Label6.Location = New Point(6, 8)
         Label6.Name = "Label6"
         Label6.Size = New Size(131, 15)
         Label6.TabIndex = 16
@@ -252,7 +337,7 @@ Partial Class frmMain
         ' Label5
         ' 
         Label5.AutoSize = True
-        Label5.Location = New Point(6, 261)
+        Label5.Location = New Point(326, 212)
         Label5.Name = "Label5"
         Label5.Size = New Size(86, 15)
         Label5.TabIndex = 15
@@ -261,7 +346,7 @@ Partial Class frmMain
         ' btnRunIndirect
         ' 
         btnRunIndirect.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
-        btnRunIndirect.Location = New Point(4, 395)
+        btnRunIndirect.Location = New Point(324, 498)
         btnRunIndirect.Name = "btnRunIndirect"
         btnRunIndirect.Size = New Size(312, 27)
         btnRunIndirect.TabIndex = 17
@@ -271,7 +356,7 @@ Partial Class frmMain
         ' btnRemoveTargetAddress
         ' 
         btnRemoveTargetAddress.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
-        btnRemoveTargetAddress.Location = New Point(218, 362)
+        btnRemoveTargetAddress.Location = New Point(538, 465)
         btnRemoveTargetAddress.Name = "btnRemoveTargetAddress"
         btnRemoveTargetAddress.Size = New Size(98, 27)
         btnRemoveTargetAddress.TabIndex = 16
@@ -281,7 +366,7 @@ Partial Class frmMain
         ' btnAddTargetAddress
         ' 
         btnAddTargetAddress.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
-        btnAddTargetAddress.Location = New Point(218, 329)
+        btnAddTargetAddress.Location = New Point(538, 432)
         btnAddTargetAddress.Name = "btnAddTargetAddress"
         btnAddTargetAddress.Size = New Size(98, 27)
         btnAddTargetAddress.TabIndex = 15
@@ -293,15 +378,15 @@ Partial Class frmMain
         cboTargetAddress.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left
         cboTargetAddress.DropDownStyle = ComboBoxStyle.Simple
         cboTargetAddress.FormattingEnabled = True
-        cboTargetAddress.Location = New Point(218, 279)
+        cboTargetAddress.Location = New Point(538, 230)
         cboTargetAddress.Name = "cboTargetAddress"
-        cboTargetAddress.Size = New Size(98, 44)
-        cboTargetAddress.TabIndex = 14
+        cboTargetAddress.Size = New Size(98, 196)
+        cboTargetAddress.TabIndex = 20
         ' 
         ' Label2
         ' 
         Label2.AutoSize = True
-        Label2.Location = New Point(218, 263)
+        Label2.Location = New Point(538, 212)
         Label2.Name = "Label2"
         Label2.Size = New Size(103, 15)
         Label2.TabIndex = 10
@@ -312,10 +397,10 @@ Partial Class frmMain
         lsvIndirectJmp.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left
         lsvIndirectJmp.Columns.AddRange(New ColumnHeader() {ColumnHeader7, ColumnHeader8})
         lsvIndirectJmp.FullRowSelect = True
-        lsvIndirectJmp.Location = New Point(6, 279)
+        lsvIndirectJmp.Location = New Point(326, 230)
         lsvIndirectJmp.Name = "lsvIndirectJmp"
-        lsvIndirectJmp.Size = New Size(206, 110)
-        lsvIndirectJmp.TabIndex = 13
+        lsvIndirectJmp.Size = New Size(206, 262)
+        lsvIndirectJmp.TabIndex = 19
         lsvIndirectJmp.UseCompatibleStateImageBehavior = False
         lsvIndirectJmp.View = View.Details
         ' 
@@ -332,7 +417,7 @@ Partial Class frmMain
         ' btnExportBasic
         ' 
         btnExportBasic.Anchor = AnchorStyles.Bottom Or AnchorStyles.Right
-        btnExportBasic.Location = New Point(1017, 389)
+        btnExportBasic.Location = New Point(1210, 496)
         btnExportBasic.Name = "btnExportBasic"
         btnExportBasic.Size = New Size(121, 33)
         btnExportBasic.TabIndex = 19
@@ -343,9 +428,9 @@ Partial Class frmMain
         ' 
         lsvOutput.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
         lsvOutput.Columns.AddRange(New ColumnHeader() {ColumnHeader1, ColumnHeader2, ColumnHeader3, ColumnHeader4, ColumnHeader5, ColumnHeader6, ColumnHeader12})
-        lsvOutput.Location = New Point(327, 8)
+        lsvOutput.Location = New Point(642, 8)
         lsvOutput.Name = "lsvOutput"
-        lsvOutput.Size = New Size(822, 377)
+        lsvOutput.Size = New Size(700, 484)
         lsvOutput.TabIndex = 18
         lsvOutput.UseCompatibleStateImageBehavior = False
         lsvOutput.View = View.Details
@@ -395,7 +480,7 @@ Partial Class frmMain
         TabPage2.Location = New Point(4, 24)
         TabPage2.Name = "TabPage2"
         TabPage2.Padding = New Padding(3)
-        TabPage2.Size = New Size(1155, 430)
+        TabPage2.Size = New Size(1348, 537)
         TabPage2.TabIndex = 1
         TabPage2.Text = "Analysis"
         TabPage2.UseVisualStyleBackColor = True
@@ -404,7 +489,7 @@ Partial Class frmMain
         ' 
         lblRemark.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
         lblRemark.AutoSize = True
-        lblRemark.Location = New Point(277, 485)
+        lblRemark.Location = New Point(277, 594)
         lblRemark.Name = "lblRemark"
         lblRemark.Size = New Size(12, 15)
         lblRemark.TabIndex = 14
@@ -413,7 +498,7 @@ Partial Class frmMain
         ' btnAnalyse
         ' 
         btnAnalyse.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
-        btnAnalyse.Location = New Point(196, 391)
+        btnAnalyse.Location = New Point(196, 488)
         btnAnalyse.Name = "btnAnalyse"
         btnAnalyse.Size = New Size(88, 33)
         btnAnalyse.TabIndex = 13
@@ -429,7 +514,7 @@ Partial Class frmMain
         txtAnaCode4.Name = "txtAnaCode4"
         txtAnaCode4.ReadOnly = True
         txtAnaCode4.ScrollBars = ScrollBars.Both
-        txtAnaCode4.Size = New Size(278, 417)
+        txtAnaCode4.Size = New Size(278, 514)
         txtAnaCode4.TabIndex = 12
         txtAnaCode4.WordWrap = False
         ' 
@@ -442,7 +527,7 @@ Partial Class frmMain
         txtAnaCode3.Name = "txtAnaCode3"
         txtAnaCode3.ReadOnly = True
         txtAnaCode3.ScrollBars = ScrollBars.Both
-        txtAnaCode3.Size = New Size(278, 417)
+        txtAnaCode3.Size = New Size(278, 514)
         txtAnaCode3.TabIndex = 11
         txtAnaCode3.WordWrap = False
         ' 
@@ -455,14 +540,14 @@ Partial Class frmMain
         txtAnaCode2.Name = "txtAnaCode2"
         txtAnaCode2.ReadOnly = True
         txtAnaCode2.ScrollBars = ScrollBars.Both
-        txtAnaCode2.Size = New Size(278, 417)
+        txtAnaCode2.Size = New Size(278, 514)
         txtAnaCode2.TabIndex = 10
         txtAnaCode2.WordWrap = False
         ' 
         ' btnLoadAna
         ' 
         btnLoadAna.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
-        btnLoadAna.Location = New Point(99, 391)
+        btnLoadAna.Location = New Point(99, 488)
         btnLoadAna.Name = "btnLoadAna"
         btnLoadAna.Size = New Size(91, 33)
         btnLoadAna.TabIndex = 9
@@ -472,7 +557,7 @@ Partial Class frmMain
         ' btnExportAna
         ' 
         btnExportAna.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
-        btnExportAna.Location = New Point(6, 391)
+        btnExportAna.Location = New Point(6, 488)
         btnExportAna.Name = "btnExportAna"
         btnExportAna.Size = New Size(87, 33)
         btnExportAna.TabIndex = 8
@@ -482,13 +567,13 @@ Partial Class frmMain
         ' txtAnaCode
         ' 
         txtAnaCode.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left
-        txtAnaCode.Location = New Point(6, 7)
+        txtAnaCode.Location = New Point(6, 3)
         txtAnaCode.MaxLength = 1000000
         txtAnaCode.Multiline = True
         txtAnaCode.Name = "txtAnaCode"
         txtAnaCode.ReadOnly = True
         txtAnaCode.ScrollBars = ScrollBars.Both
-        txtAnaCode.Size = New Size(278, 378)
+        txtAnaCode.Size = New Size(278, 479)
         txtAnaCode.TabIndex = 0
         txtAnaCode.WordWrap = False
         ' 
@@ -499,7 +584,7 @@ Partial Class frmMain
         TabPage3.Controls.Add(btnGenerate)
         TabPage3.Location = New Point(4, 24)
         TabPage3.Name = "TabPage3"
-        TabPage3.Size = New Size(1155, 430)
+        TabPage3.Size = New Size(1348, 537)
         TabPage3.TabIndex = 2
         TabPage3.Text = "Code generation"
         TabPage3.UseVisualStyleBackColor = True
@@ -512,7 +597,7 @@ Partial Class frmMain
         txtCHeader.Name = "txtCHeader"
         txtCHeader.ReadOnly = True
         txtCHeader.ScrollBars = ScrollBars.Both
-        txtCHeader.Size = New Size(343, 388)
+        txtCHeader.Size = New Size(343, 495)
         txtCHeader.TabIndex = 2
         ' 
         ' txtCCode
@@ -523,7 +608,7 @@ Partial Class frmMain
         txtCCode.Name = "txtCCode"
         txtCCode.ReadOnly = True
         txtCCode.ScrollBars = ScrollBars.Both
-        txtCCode.Size = New Size(800, 388)
+        txtCCode.Size = New Size(1014, 495)
         txtCCode.TabIndex = 1
         ' 
         ' btnGenerate
@@ -561,9 +646,9 @@ Partial Class frmMain
         ' txtIndirectAddress
         ' 
         txtIndirectAddress.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
-        txtIndirectAddress.Location = New Point(154, 36)
+        txtIndirectAddress.Location = New Point(170, 36)
         txtIndirectAddress.Name = "txtIndirectAddress"
-        txtIndirectAddress.Size = New Size(916, 23)
+        txtIndirectAddress.Size = New Size(1093, 23)
         txtIndirectAddress.TabIndex = 3
         ' 
         ' Label4
@@ -580,33 +665,14 @@ Partial Class frmMain
         txtDataRange.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
         txtDataRange.Location = New Point(170, 65)
         txtDataRange.Name = "txtDataRange"
-        txtDataRange.Size = New Size(900, 23)
+        txtDataRange.Size = New Size(1093, 23)
         txtDataRange.TabIndex = 4
-        ' 
-        ' Label9
-        ' 
-        Label9.AutoSize = True
-        Label9.Location = New Point(12, 98)
-        Label9.Name = "Label9"
-        Label9.Size = New Size(112, 15)
-        Label9.TabIndex = 10
-        Label9.Text = "Switch bank points"
-        ' 
-        ' txtSwitchBankPoints
-        ' 
-        txtSwitchBankPoints.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
-        txtSwitchBankPoints.Location = New Point(130, 95)
-        txtSwitchBankPoints.Name = "txtSwitchBankPoints"
-        txtSwitchBankPoints.Size = New Size(940, 23)
-        txtSwitchBankPoints.TabIndex = 5
         ' 
         ' frmMain
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
-        ClientSize = New Size(1177, 591)
-        Controls.Add(txtSwitchBankPoints)
-        Controls.Add(Label9)
+        ClientSize = New Size(1370, 671)
         Controls.Add(txtDataRange)
         Controls.Add(Label4)
         Controls.Add(txtIndirectAddress)
@@ -682,9 +748,16 @@ Partial Class frmMain
     Friend WithEvents btnAddMapping As Button
     Friend WithEvents cboMapToAddress As ComboBox
     Friend WithEvents Label7 As Label
-    Friend WithEvents Label8 As Label
-    Friend WithEvents lstModes As ListBox
     Friend WithEvents Label9 As Label
-    Friend WithEvents txtSwitchBankPoints As TextBox
+    Friend WithEvents Label10 As Label
+    Friend WithEvents btnMappingActivationRemove As Button
+    Friend WithEvents btnMappingActivationAdd As Button
+    Friend WithEvents lsvMappingActivation As ListView
+    Friend WithEvents txtMappingSet As TextBox
+    Friend WithEvents Label11 As Label
+    Friend WithEvents ColumnHeader11 As ColumnHeader
+    Friend WithEvents ColumnHeader13 As ColumnHeader
+    Friend WithEvents ColumnHeader14 As ColumnHeader
+    Friend WithEvents txtMappingActivation As TextBox
 
 End Class

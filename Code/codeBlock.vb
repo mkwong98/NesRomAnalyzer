@@ -7,7 +7,9 @@ Public Structure memoryTarget
 End Structure
 
 Public MustInherit Class codeBlock
+    Public address As UInt16
     Public realAddress As UInt32
+    Public config As String
 
     Public Shared Function createCPURegisterMemoryTarget(r As CpuRegister) As memoryTarget
         Dim t As memoryTarget

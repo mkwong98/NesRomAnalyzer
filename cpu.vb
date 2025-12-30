@@ -2,6 +2,8 @@
 Imports System.ComponentModel
 Imports System.Net
 Imports System.Reflection.Emit
+Imports System.Reflection.Metadata
+Imports Windows.Win32.System
 
 Public Enum AddressingMode
     IMPLICIT
@@ -54,6 +56,11 @@ Structure branchEvent
     Public opCode As memoryByte
 End Structure
 
+Structure bankSwitchActivation
+    Public mapping As String
+    Public activation As UInt32
+End Structure
+
 Module cpu
     Private a As memoryByte
     Private x As memoryByte
@@ -71,8 +78,9 @@ Module cpu
 
     Private branchAddress As List(Of branchEvent)
     Public indirectJmpList As List(Of instJump)
-    Private taskConfig As bankConfig
+    Private taskConfig As String
     Private currentRealAddress As UInt32
+    Private bankSwitchActivations As List(Of bankSwitchActivation)
 
 
     Public Sub init()
@@ -85,7 +93,7 @@ Module cpu
 
         branchAddress = New List(Of branchEvent)
         indirectJmpList = New List(Of instJump)
-
+        bankSwitchActivations = New List(Of bankSwitchActivation)
     End Sub
 
     Public Sub powerOn()
@@ -102,16 +110,13 @@ Module cpu
         writeStatusReg(&H4, s)
     End Sub
 
-    Private Function readStatusReg() As Byte
-        Dim v As Byte = 0
-        If flgCarry.value Then v = v Or bitMask(0)
-        If flgZero.value Then v = v Or bitMask(1)
-        If flgIntrDis.value Then v = v Or bitMask(2)
-        If flgDecimal.value Then v = v Or bitMask(3)
-        If flgOverflow.value Then v = v Or bitMask(6)
-        If flgNegative.value Then v = v Or bitMask(7)
-        Return v
-    End Function
+    Public Sub addBankSwitchActivation(mapping As String, address As UInt32)
+        Dim b As New bankSwitchActivation With {
+            .mapping = mapping,
+            .activation = address
+        }
+        bankSwitchActivations.Add(b)
+    End Sub
 
     Private Sub writeStatusReg(v As Byte, s As memoryID)
         flgCarry.value = ((v And bitMask(0)) <> 0)
@@ -138,51 +143,64 @@ Module cpu
     Public Sub run()
         Dim isRunning As Boolean = True
         'read instruction
-        Dim ops As List(Of memoryByte)
         Dim opCode As memoryByte
         Dim pcVal As UInt16
         Dim lastCode As UInt32 = UInt32.MaxValue
         opCode = readRealAddress(currentRealAddress, PrgByteType.CODE_HEAD)
+        opCode.source.config = taskConfig
+        pcVal = CInt(pc(1).currentValue) << 8 Or pc(0).currentValue
         While isRunning
-            pcVal = CInt(pc(1).currentValue) << 8 Or pc(0).currentValue
             If opCode.currentUsage = PrgByteType.LOCKED_DATA Then
                 isRunning = False
             Else
+                For Each act As bankSwitchActivation In bankSwitchActivations
+                    If act.activation = currentRealAddress Then
+                        taskConfig = rom.switchBank(taskConfig, mapper.convertMappingStringToList(act.mapping))
+                    End If
+                Next
+
                 incPC()
+                currentRealAddress += 1
                 isRunning = runOpCode(opCode, pcVal, currentRealAddress)
                 lastCode = opCode.source.ID
+                pcVal = CInt(pc(1).currentValue) << 8 Or pc(0).currentValue
             End If
 
             If isRunning Then
-                ops = read(pcVal, PrgByteType.CODE_HEAD, taskConfig)
-                If ops.Count = 1 Then
-                    opCode = ops(0)
-                    currentRealAddress = opCode.source.ID
-                Else
-                    'multiple mappings, stop running
+                Dim opList As List(Of memoryByte) = read(pcVal, PrgByteType.CODE_HEAD, taskConfig)
+                If opList.Count = 0 Then
+                    'no mapped memory here, stop execution
                     isRunning = False
-                    'add to branch list to handle later
-                    For Each opCode In ops
-                        Dim b As branchEvent
-                        b.sourceID = lastCode
-                        b.target = pcVal
-                        b.opCode = opCode
-                        branchAddress.Add(b)
-                    Next
+                Else
+                    If opList.Count > 1 Then
+                        For i As Integer = 1 To opList.Count - 1
+                            'there is multiple mapped memory here, mark as branch step
+                            Dim b As branchEvent
+                            b.sourceID = opCode.source.ID
+                            b.target = pcVal
+                            b.opCode = opList(i)
+                            branchAddress.Add(b)
+                        Next
+                    End If
+                    opCode = opList(0)
+                    currentRealAddress = opCode.source.ID
                 End If
             End If
+
 
             While branchAddress.Count > 0 And Not isRunning
                 'handle possible branch that missed
                 Dim b As branchEvent = branchAddress(0)
                 branchAddress.RemoveAt(0)
-                opCode = b.opCode
+                'reread the opcode at the branch target
+                opCode = rom.readRealAddress(b.opCode.source.ID, PrgByteType.CODE_HEAD)
                 If Not opCode.known Then
                     isRunning = True
                     pc(1).currentValue = b.target >> 8
                     pc(0).currentValue = b.target And &HFF
                     currentRealAddress = opCode.source.ID
-                    taskConfig = opCode.source.config
+                    taskConfig = b.opCode.source.config
+                    opCode.source.config = taskConfig
                     logBranch(b.target, b.sourceID)
                 End If
             End While
@@ -208,7 +226,7 @@ Module cpu
 
         Dim tRemarks As String = ""
         Dim tAddress As UInt16
-        Dim tAddressList As List(Of memoryByte)
+        Dim tMBList As List(Of memoryByte)
         Dim tMemory As memoryByte
         Dim oInst As instruction
 
@@ -225,10 +243,13 @@ Module cpu
                 stillRunning = False
             Case "JSR"
                 tAddress = CInt(operand(1).currentValue) << 8 Or operand(0).currentValue
-                tAddressList = read(tAddress, PrgByteType.PEEK, taskConfig)
-                For Each tMemory In tAddressList
+                tMBList = read(tAddress, PrgByteType.PEEK, taskConfig)
+                For Each tMemory In tMBList
                     addJSRTask(tMemory.source)
-                    tRemarks = realAddressToHexStr(tMemory.source.ID)
+                    If tRemarks <> "" Then
+                        tRemarks &= "/"
+                    End If
+                    tRemarks &= realAddressToHexStr(tMemory.source.ID)
                 Next
 
                 Dim tInst As New instSubroutine
@@ -250,42 +271,41 @@ Module cpu
                 End If
                 oInst = tInst
 
-                tAddressList = read(tAddress, PrgByteType.PEEK, taskConfig)
-                If tAddressList.Count = 1 Then
-                    'single mapping
-                    tMemory = tAddressList(0)
-                    If tMemory.known Then
-                        stillRunning = False
-                    Else
-                        pc(1).currentValue = operand(1).currentValue
-                        pc(0).currentValue = operand(0).currentValue
-                        pRealAddress = tMemory.source.ID
-                    End If
-                    tRemarks = realAddressToHexStr(tMemory.source.ID)
-                Else
-                    'multiple mappings, stop execution
-                    stillRunning = False
-                    For Each tMemory In tAddressList
-                        If Not tMemory.known Then
+                tMBList = read(tAddress, PrgByteType.PEEK, taskConfig)
+                Dim hasUnknown As Boolean = False
+                Dim isFirstUnknown As Boolean = True
+                For Each tMemory In tMBList
+                    If Not tMemory.known Then
+                        hasUnknown = True
+                        If isFirstUnknown Then
+                            isFirstUnknown = False
+                            pc(1).currentValue = operand(1).currentValue
+                            pc(0).currentValue = operand(0).currentValue
+                            pRealAddress = tMemory.source.ID
+                        Else
                             Dim b As branchEvent
                             b.sourceID = pOpCode.source.ID
                             b.target = tAddress
                             b.opCode = tMemory
                             branchAddress.Add(b)
                         End If
-                    Next
+                    End If
+                    If tRemarks <> "" Then
+                        tRemarks &= "/"
+                    End If
+                    tRemarks &= realAddressToHexStr(tMemory.source.ID)
+                Next
+                If Not hasUnknown Then
+                    stillRunning = False
                 End If
-
             Case "BRK"
-                Dim realAddressList As List(Of memoryID) = readAsAddress(&HFFFE, PrgByteType.INTERRUPT_VECTOR, taskConfig)
-                For Each mb As memoryID In realAddressList
-                    Dim rAddess As UInt16 = mb.address
-                    Dim realAddressList2 As List(Of memoryByte) = read(rAddess, PrgByteType.PEEK, mb.config)
-                    For Each mb2 As memoryByte In realAddressList2
+                Dim mbList As List(Of memoryID) = readAsAddress(&HFFFE, PrgByteType.INTERRUPT_VECTOR, taskConfig)
+                For Each mb As memoryID In mbList
+                    tMBList = read(mb.address, PrgByteType.PEEK, mb.config)
+                    For Each mb2 As memoryByte In tMBList
                         addBRKTask(mb2.source)
                     Next
                 Next
-
                 Dim tInst As New instBrk
                 oInst = tInst
                 incPC()
@@ -491,8 +511,8 @@ Module cpu
                     tAddress -= &H100
                 End If
                 tAddress += operand(0).currentValue
-                tAddressList = read(tAddress, PrgByteType.PEEK, taskConfig)
-                For Each tMemory In tAddressList
+                tMBList = read(tAddress, PrgByteType.PEEK, taskConfig)
+                For Each tMemory In tMBList
                     If Not tMemory.known Then
                         Dim b As branchEvent
                         b.sourceID = pOpCode.source.ID
@@ -502,6 +522,7 @@ Module cpu
                     End If
                     tInst.branchToAddress.Add(tMemory.source.ID)
                 Next
+
                 oInst = tInst
             Case "PHA"
                 Dim tInst As New instStack
@@ -570,6 +591,8 @@ Module cpu
                 stillRunning = False
         End Select
         oInst.realAddress = pOpCode.source.ID
+        oInst.config = pOpCode.source.config
+        oInst.address = pAddress
         oInst.opName = opTable(pOpCode.currentValue).name
 
 
@@ -601,46 +624,46 @@ Module cpu
                 t.realAddress.ID = CpuRegister.a
                 Return a
             Case AddressingMode.ZERO_PAGE
-                v = read(op0, PrgByteType.DATA, pSource.config).Item(0)
+                v = read(op0, PrgByteType.DATA, pSource.config)(0)
                 v.unchanged = False
                 remarks = getMemoryName(v.source)
                 t.address = op0
                 t.realAddress = v.source
                 Return v
             Case AddressingMode.ZERO_PAGE_INDEXED_X
-                v = read(op0, PrgByteType.PEEK, pSource.config).Item(0)
+                v = read(op0, PrgByteType.PEEK, pSource.config)(0)
                 remarks = getMemoryName(v.source) & "+X"
                 t.address = op0
                 t.realAddress = v.source
             Case AddressingMode.ZERO_PAGE_INDEXED_Y
-                v = read(op0, PrgByteType.PEEK, pSource.config).Item(0)
+                v = read(op0, PrgByteType.PEEK, pSource.config)(0)
                 remarks = getMemoryName(v.source) & "+Y"
                 t.address = op0
                 t.realAddress = v.source
             Case AddressingMode.ABSOLUTE
                 t.address = CInt(op1) << 8 Or op0
-                v = read(t.address, PrgByteType.DATA, pSource.config).Item(0)
+                v = read(t.address, PrgByteType.DATA, pSource.config)(0)
                 v.unchanged = False
                 remarks = getMemoryName(v.source)
                 t.realAddress = v.source
                 Return v
             Case AddressingMode.ABSOLUTE_INDEXED_X
                 t.address = CInt(op1) << 8 Or op0
-                v = read(CInt(op1) << 8 Or op0, PrgByteType.PEEK, pSource.config).Item(0)
+                v = read(CInt(op1) << 8 Or op0, PrgByteType.PEEK, pSource.config)(0)
                 remarks = getMemoryName(v.source) & "+X"
                 t.realAddress = v.source
             Case AddressingMode.ABSOLUTE_INDEXED_Y
                 t.address = CInt(op1) << 8 Or op0
-                v = read(CInt(op1) << 8 Or op0, PrgByteType.PEEK, pSource.config).Item(0)
+                v = read(CInt(op1) << 8 Or op0, PrgByteType.PEEK, pSource.config)(0)
                 remarks = getMemoryName(v.source) & "+Y"
                 t.realAddress = v.source
             Case AddressingMode.INDEXED_INDIRECT_X
-                v = read(op0, PrgByteType.PEEK, pSource.config).Item(0)
+                v = read(op0, PrgByteType.PEEK, pSource.config)(0)
                 remarks = "(RAM(" & addressToHexStr(op0) & "+X))"
                 t.address = op0
                 t.realAddress = v.source
             Case AddressingMode.INDIRECT_INDEXED_Y
-                v = read(op0, PrgByteType.DATA, pSource.config).Item(0)
+                v = read(op0, PrgByteType.DATA, pSource.config)(0)
                 remarks = "(RAM(" & addressToHexStr(op0) & ")+Y)"
                 t.address = op0
                 t.realAddress = v.source
@@ -656,42 +679,42 @@ Module cpu
         t.addrMode = m
         Select Case m
             Case AddressingMode.ZERO_PAGE
-                v = read(op0, PrgByteType.PEEK, pSource.config).Item(0)
+                v = read(op0, PrgByteType.PEEK, pSource.config)(0)
                 remarks = getMemoryName(v.source)
                 t.address = op0
                 t.realAddress = v.source
             Case AddressingMode.ZERO_PAGE_INDEXED_X
-                v = read(op0, PrgByteType.PEEK, pSource.config).Item(0)
+                v = read(op0, PrgByteType.PEEK, pSource.config)(0)
                 remarks = getMemoryName(v.source) & "+X"
                 t.address = op0
                 t.realAddress = v.source
             Case AddressingMode.ZERO_PAGE_INDEXED_Y
-                v = read(op0, PrgByteType.PEEK, pSource.config).Item(0)
+                v = read(op0, PrgByteType.PEEK, pSource.config)(0)
                 remarks = getMemoryName(v.source) & "+Y"
                 t.address = op0
                 t.realAddress = v.source
             Case AddressingMode.ABSOLUTE
                 t.address = CInt(op1) << 8 Or op0
-                v = read(t.address, PrgByteType.PEEK, pSource.config).Item(0)
+                v = read(t.address, PrgByteType.PEEK, pSource.config)(0)
                 remarks = getMemoryName(v.source)
                 t.realAddress = v.source
             Case AddressingMode.ABSOLUTE_INDEXED_X
                 t.address = CInt(op1) << 8 Or op0
-                v = read(t.address, PrgByteType.PEEK, pSource.config).Item(0)
+                v = read(t.address, PrgByteType.PEEK, pSource.config)(0)
                 remarks = getMemoryName(v.source) & "+X"
                 t.realAddress = v.source
             Case AddressingMode.ABSOLUTE_INDEXED_Y
                 t.address = CInt(op1) << 8 Or op0
-                v = read(t.address, PrgByteType.PEEK, pSource.config).Item(0)
+                v = read(t.address, PrgByteType.PEEK, pSource.config)(0)
                 remarks = getMemoryName(v.source) & "+Y"
                 t.realAddress = v.source
             Case AddressingMode.INDEXED_INDIRECT_X
-                v = read(op0, PrgByteType.PEEK, pSource.config).Item(0)
+                v = read(op0, PrgByteType.PEEK, pSource.config)(0)
                 remarks = "(RAM(" & addressToHexStr(op0) & "+X))"
                 t.address = op0
                 t.realAddress = v.source
             Case AddressingMode.INDIRECT_INDEXED_Y
-                v = read(op0, PrgByteType.DATA, pSource.config).Item(0)
+                v = read(op0, PrgByteType.DATA, pSource.config)(0)
                 remarks = "(RAM(" & addressToHexStr(op0) & ")+Y)"
                 t.address = op0
                 t.realAddress = v.source

@@ -111,43 +111,34 @@ Module analyzer
         End If
 
         console.init()
-        Dim enabledModes As New List(Of String)
-        For Each idx As Integer In frm.lstModes.SelectedIndices
-            enabledModes.Add(frm.lstModes.Items(idx).Text)
-        Next
-        rom.setEnabledModes(enabledModes)
 
-        For Each itm As ListViewItem In frm.lsvBanks.Items
-            Dim modeName As String = itm.SubItems(0).Text
-            Dim bankMappings As String = itm.SubItems(1).Text
-            rom.setBankMappings(modeName, bankMappings)
+        For Each itm2 As ListViewItem In frm.lsvMappingActivation.Items
+            console.addBankSwitchActivation(itm2.SubItems(0).Text, Convert.ToUInt32(itm2.SubItems(1).Text.Trim(), 16))
         Next
-
 
         'add first 2 tasks
         Dim t As taskToRun
-        Dim realAddressList As New List(Of memoryID)
-        Dim realAddressList2 As New List(Of memoryByte)
-        Dim tConfig As bankConfig
-        tConfig.inUse = False
+        Dim realAddressL As List(Of memoryID)
+        Dim realAddressL2 As List(Of memoryByte)
+        Dim tConfig As String = rom.getDefaultBankConfig
 
-        realAddressList = readAsAddress(&HFFFC, PrgByteType.INTERRUPT_VECTOR, tConfig)
-        For Each mb As memoryID In realAddressList
-            Dim rAddess As UInt16 = mb.address
-            realAddressList2 = read(rAddess, PrgByteType.PEEK, mb.config)
-            For Each mb2 As memoryByte In realAddressList2
-                t = initTaskForInterrupt(mb2.source, TaskType.RESET)
+        realAddressL = readAsAddress(&HFFFC, PrgByteType.INTERRUPT_VECTOR, tConfig)
+        For Each realAddress As memoryID In realAddressL
+            Dim rAddess As UInt16 = realAddress.address
+            realAddressL2 = read(rAddess, PrgByteType.PEEK, realAddress.config)
+            For Each realAddress2 As memoryByte In realAddressL2
+                t = initTaskForInterrupt(realAddress2.source, TaskType.RESET)
                 t.name = "RESET_" & t.id
                 tasksToRun.Add(t)
             Next
         Next
 
-        realAddressList = readAsAddress(&HFFFA, PrgByteType.INTERRUPT_VECTOR, tConfig)
-        For Each mb As memoryID In realAddressList
-            Dim rAddess As UInt16 = mb.address
-            realAddressList2 = read(rAddess, PrgByteType.PEEK, mb.config)
-            For Each mb2 As memoryByte In realAddressList2
-                t = initTaskForInterrupt(mb2.source, TaskType.NMI)
+        realAddressL = readAsAddress(&HFFFA, PrgByteType.INTERRUPT_VECTOR, tConfig)
+        For Each realAddress As memoryID In realAddressL
+            Dim rAddess As UInt16 = realAddress.address
+            realAddressL2 = read(rAddess, PrgByteType.PEEK, realAddress.config)
+            For Each realAddress2 As memoryByte In realAddressL2
+                t = initTaskForInterrupt(realAddress2.source, TaskType.NMI)
                 t.name = "NMI_" & t.id
                 tasksToRun.Add(t)
             Next
@@ -157,23 +148,15 @@ Module analyzer
         Dim tt() As String = Split(frm.txtIndirectAddress.Text, ",")
         For Each a As String In tt
             If a <> "" Then
-                realAddressList2 = rom.getMappedMemoryBytes(Convert.ToUInt16(a, 16), PrgByteType.PEEK, tConfig)
-                For Each mb As memoryByte In realAddressList2
-                    addJSRTask(mb.source)
+                Dim ja() As String = Split(a, "@")
+                If ja.Length = 1 Then
+                    realAddressL2 = rom.getMappedMemoryBytes(Convert.ToUInt16(a, 16), PrgByteType.PEEK, "")
+                Else
+                    realAddressL2 = rom.getMappedMemoryBytes(Convert.ToUInt16(ja(0), 16), PrgByteType.PEEK, ja(1))
+                End If
+                For Each realAddress2 As memoryByte In realAddressL2
+                    addJSRTask(realAddress2.source)
                 Next
-            End If
-        Next
-
-        'add bank switching tasks
-        tt = Split(frm.txtSwitchBankPoints.Text, ",")
-        For Each a As String In tt
-            If a <> "" Then
-                Dim realAddress As memoryID
-                realAddress.config.inUse = False
-                realAddress.address = 0
-                realAddress.ID = Convert.ToUInt16(a, 32)
-                realAddress.Type = MemoryType.PRG_ROM
-                addJSRTask(realAddress)
             End If
         Next
 
@@ -256,17 +239,16 @@ Module analyzer
     End Sub
 
     Public Sub startIndirect()
-        Dim realAddressList As New List(Of memoryByte)
-        Dim tConfig As bankConfig
-        tConfig.inUse = False
+        Dim realAddressL As List(Of memoryByte)
+        Dim tConfig As String = ""
 
         currentTask = tasksToRun.Count
         Dim indirectCount As Integer = indirectJmpList.Count
         For Each inst As instJump In indirectJmpList
             For Each tAddress As UInt16 In inst.indirectJumpTargets
-                realAddressList = rom.getMappedMemoryBytes(Convert.ToUInt16(tAddress, 16), PrgByteType.PEEK, tConfig)
-                For Each mb As memoryByte In realAddressList
-                    addJSRTask(mb.source)
+                realAddressL = rom.getMappedMemoryBytes(Convert.ToUInt16(tAddress, 16), PrgByteType.PEEK, tConfig)
+                For Each realAddress As memoryByte In realAddressL
+                    addJSRTask(realAddress.source)
                 Next
             Next
         Next
@@ -416,6 +398,7 @@ Module analyzer
                 i.SubItems.Add("INDIRECT_INDEXED_Y")
         End Select
         i.SubItems.Add(pRemarks)
+        i.EnsureVisible()
         Application.DoEvents()
     End Sub
 
@@ -426,269 +409,273 @@ Module analyzer
 
     End Sub
 
-    'Public Sub analyse()
-    '    'put all instructions together and sort by real address
-    '    Dim fullBlock As New block
-    '    For Each b As block In lines
-    '        fullBlock.takeAllInstructions(b)
-    '    Next
-    '    fullCode.Clear()
-    '    For Each b As codeBlock In fullBlock.code
-    '        Dim i As instruction = CType(b, instruction)
-    '        fullCode.Add(i)
-    '    Next
-    '    If fullCode.Count = 0 Then
-    '        MsgBox("Error: No code found")
-    '        Return
-    '    End If
+    Public Sub analyse()
+        'put all instructions together and sort by real address
+        Dim fullBlock As New block
+        For Each b As block In lines
+            fullBlock.takeAllInstructions(b)
+        Next
+        fullCode.Clear()
+        For Each b As codeBlock In fullBlock.code
+            Dim i As instruction = CType(b, instruction)
+            fullCode.Add(i)
+        Next
+        If fullCode.Count = 0 Then
+            MsgBox("Error: No code found")
+            Return
+        End If
 
-    '    fullCode.Sort(New InstComparer)
-    '    jumpLinks.Clear()
-    '    indirectJmpList.Clear()
+        fullCode.Sort(New InstComparer)
+        jumpLinks.Clear()
+        indirectJmpList.Clear()
 
-    '    'trace the code again
-    '    For Each i As instruction In fullCode
-    '        i.traceMarking = ""
-    '        Select Case i.type
-    '            Case InstructionType.BRANCH
-    '                Dim b As instBranch = CType(i, instBranch)
-    '                Dim r As addressRange
-    '                r.rangeStart = b.realAddress
-    '                r.rangeEnd = b.branchToAddress
-    '                jumpLinks.Add(r)
-    '            Case InstructionType.JUMP
-    '                Dim b As instJump = CType(i, instJump)
-    '                Dim r As addressRange
-    '                r.rangeStart = b.realAddress
-    '                If b.isIndirect Then
-    '                    For Each tAddress As UInt16 In b.indirectJumpTargets
-    '                        Dim mb As memoryByte = read(tAddress, PrgByteType.CODE_HEAD)
-    '                        r.rangeEnd = mb.source.ID
-    '                        jumpLinks.Add(r)
-    '                        b.indirectJumpRealTargets.Add(r.rangeEnd)
-    '                    Next
-    '                    indirectJmpList.Add(b)
-    '                Else
-    '                    r.rangeEnd = b.jumpToRealAddress
-    '                    jumpLinks.Add(r)
-    '                End If
-    '            Case InstructionType.SUBROUTINE
-    '                Dim b As instSubroutine = CType(i, instSubroutine)
-    '                Dim r As addressRange
-    '                r.rangeStart = b.realAddress
-    '                r.rangeEnd = b.subRealAddress
-    '                jumpLinks.Add(r)
-    '        End Select
-    '    Next
-    '    brkTraced = False
-    '    frm.txtAnaCode3.Text = ""
-    '    jumpLinks.Sort(New addressRangeDestComparer)
-    '    For Each j As addressRange In jumpLinks
-    '        Dim p As Integer = findInstructionIndex(j.rangeEnd, 0, fullCode.Count - 1)
-    '        If p <> -1 Then
-    '            Dim tInst As instruction = fullCode(p)
-    '            tInst.isJumpTarget = True
-    '            If Not tInst.backSource.Contains(j.rangeStart) Then
-    '                tInst.backSource.Add(j.rangeStart)
-    '            End If
-    '        End If
-    '    Next
+        'trace the code again
+        For Each i As instruction In fullCode
+            i.traceMarking = ""
+            Select Case i.type
+                Case InstructionType.BRANCH
+                    Dim b As instBranch = CType(i, instBranch)
+                    For Each ba As UInt32 In b.branchToAddress
+                        Dim r As addressRange
+                        r.rangeStart = b.realAddress
+                        r.rangeEnd = ba
+                        jumpLinks.Add(r)
+                    Next
+                Case InstructionType.JUMP
+                    Dim b As instJump = CType(i, instJump)
+                    Dim r As addressRange
+                    r.rangeStart = b.realAddress
+                    If b.isIndirect Then
+                        For Each tAddress As UInt16 In b.indirectJumpTargets
+                            Dim mb As memoryByte = read(tAddress, PrgByteType.CODE_HEAD)
+                            r.rangeEnd = mb.source.ID
+                            jumpLinks.Add(r)
+                            b.indirectJumpRealTargets.Add(r.rangeEnd)
+                        Next
+                        indirectJmpList.Add(b)
+                    Else
+                        r.rangeEnd = b.jumpToRealAddress
+                        jumpLinks.Add(r)
+                    End If
+                Case InstructionType.SUBROUTINE
+                    Dim b As instSubroutine = CType(i, instSubroutine)
+                    For Each ba As UInt32 In b.subRealAddress
+                        Dim r As addressRange
+                        r.rangeStart = b.realAddress
+                        r.rangeEnd = ba
+                        jumpLinks.Add(r)
+                    Next
+            End Select
+        Next
+        brkTraced = False
+        frm.txtAnaCode3.Text = ""
+        jumpLinks.Sort(New addressRangeDestComparer)
+        For Each j As addressRange In jumpLinks
+            Dim p As Integer = findInstructionIndex(j.rangeEnd, 0, fullCode.Count - 1)
+            If p <> -1 Then
+                Dim tInst As instruction = fullCode(p)
+                tInst.isJumpTarget = True
+                If Not tInst.backSource.Contains(j.rangeStart) Then
+                    tInst.backSource.Add(j.rangeStart)
+                End If
+            End If
+        Next
 
-    '    traceTasksToRun.Clear()
-    '    Dim t As New traceTask
-    '    t.name = "Reset"
-    '    t.realAddress = resetAddress
-    '    t.type = TaskType.RESET
-    '    t.source = UInt32.MaxValue
-    '    traceTasksToRun.Add(t)
-    '    traceBranch(t)
+        traceTasksToRun.Clear()
+        Dim t As New traceTask
+        t.name = "Reset"
+        t.realAddress = resetAddress
+        t.type = TaskType.RESET
+        t.source = UInt32.MaxValue
+        traceTasksToRun.Add(t)
+        traceBranch(t)
 
-    '    t = New traceTask
-    '    t.name = "NMI"
-    '    t.realAddress = nmiAddress
-    '    t.type = TaskType.NMI
-    '    t.source = UInt32.MaxValue
-    '    traceTasksToRun.Add(t)
-    '    traceBranch(t)
+        t = New traceTask
+        t.name = "NMI"
+        t.realAddress = nmiAddress
+        t.type = TaskType.NMI
+        t.source = UInt32.MaxValue
+        traceTasksToRun.Add(t)
+        traceBranch(t)
 
-    '    If hasBrk And Not brkTraced Then
-    '        t = New traceTask
-    '        t.name = "BRK"
-    '        If brkAddress = UInteger.MaxValue Then
-    '            'BRK not found, read from vector again
-    '            brkAddress = rom.readAddress(readAsAddress(&HFFFE, PrgByteType.INTERRUPT_VECTOR), PrgByteType.INTERRUPT_VECTOR).source.ID
-    '        End If
-    '        t.realAddress = brkAddress
-    '        t.type = TaskType.BRK
-    '        t.source = UInt32.MaxValue
-    '        traceTasksToRun.Add(t)
-    '        traceBranch(t)
-    '    End If
+        If hasBrk And Not brkTraced Then
+            t = New traceTask
+            t.name = "BRK"
+            If brkAddress = UInteger.MaxValue Then
+                'BRK not found, read from vector again
+                brkAddress = rom.readAddress(readAsAddress(&HFFFE, PrgByteType.INTERRUPT_VECTOR), PrgByteType.INTERRUPT_VECTOR).source.ID
+            End If
+            t.realAddress = brkAddress
+            t.type = TaskType.BRK
+            t.source = UInt32.MaxValue
+            traceTasksToRun.Add(t)
+            traceBranch(t)
+        End If
 
-    '    If frm.txtIndirectAddress.Text <> "" Then
-    '        Dim tt() As String = Split(frm.txtIndirectAddress.Text, ",")
-    '        For Each a As String In tt
-    '            If a <> "" Then
-    '                Dim tMemory As memoryByte = read(Convert.ToUInt16(a, 16), PrgByteType.PEEK)
-    '                t = New traceTask
-    '                t.name = "SUB_" & realAddressToHexStr(tMemory.source.ID)
-    '                t.realAddress = tMemory.source.ID
-    '                t.type = TaskType.JSR
-    '                t.source = UInt32.MaxValue
-    '                traceTasksToRun.Add(t)
-    '                traceBranch(t)
-    '            End If
-    '        Next
-    '    End If
-
-
-    '    'trace all required reg and flag changes
-    '    For i As Integer = 1 To fullCode.Count - 1
-    '        frm.lblRemark.Text = i & " / " & fullCode.Count
-
-    '        Dim flgC, flgZ, flgI, flgD, flgV, flgN As Boolean
-    '        fullCode(i).getRequiredFlags(flgC, flgZ, flgI, flgD, flgV, flgN)
-    '        Dim regReqirements As List(Of memoryTarget) = fullCode(i).getRequiredMemoryTarget()
-    '        Dim regA As Boolean = False
-    '        Dim regX As Boolean = False
-    '        Dim regY As Boolean = False
-    '        For Each m As memoryTarget In regReqirements
-    '            If m.realAddress.Type = MemoryType.CPU_REG Then
-    '                Select Case m.realAddress.ID
-    '                    Case CpuRegister.a
-    '                        regA = True
-    '                    Case CpuRegister.x
-    '                        regX = True
-    '                    Case CpuRegister.y
-    '                        regY = True
-    '                End Select
-    '            End If
-    '        Next
-    '        If fullCode(i).backSource.Count > 0 And (flgC Or flgZ Or flgI Or flgD Or flgV Or flgN Or regA Or regX Or regY) Then
-    '            tmpTracedAddress.Clear()
-    '            For Each b As UInt32 In fullCode(i).backSource
-    '                If fullCode(i - 1).realAddress = b Then
-    '                    traceRequireChanges(fullCode(i).realAddress, i - 1, flgC, flgZ, flgI, flgD, flgV, flgN, regA, regX, regY)
-    '                Else
-    '                    traceRequireChanges(fullCode(i).realAddress, findInstructionIndex(b, 0, fullCode.Count - 1), flgC, flgZ, flgI, flgD, flgV, flgN, regA, regX, regY)
-    '                End If
-    '            Next
-    '        End If
-    '    Next
-
-    '    simplify()
-
-    '    'split into sections
-    '    codeSections.Clear()
-    '    Dim section As addressRange
-    '    section.rangeStart = fullCode(0).realAddress
-    '    section.rangeEnd = fullCode(fullCode.Count - 1).realAddress
-    '    codeSections.Add(section)
+        If frm.txtIndirectAddress.Text <> "" Then
+            Dim tt() As String = Split(frm.txtIndirectAddress.Text, ",")
+            For Each a As String In tt
+                If a <> "" Then
+                    Dim tMemory As memoryByte = read(Convert.ToUInt16(a, 16), PrgByteType.PEEK)
+                    t = New traceTask
+                    t.name = "SUB_" & realAddressToHexStr(tMemory.source.ID)
+                    t.realAddress = tMemory.source.ID
+                    t.type = TaskType.JSR
+                    t.source = UInt32.MaxValue
+                    traceTasksToRun.Add(t)
+                    traceBranch(t)
+                End If
+            Next
+        End If
 
 
-    '    splitSection(UInt32.MaxValue, resetAddress)
-    '    splitSection(UInt32.MaxValue, nmiAddress)
-    '    If hasBrk And Not brkTraced Then
-    '        splitSection(UInt32.MaxValue, brkAddress)
-    '    End If
+        'trace all required reg and flag changes
+        For i As Integer = 1 To fullCode.Count - 1
+            frm.lblRemark.Text = i & " / " & fullCode.Count
 
-    '    If frm.txtIndirectAddress.Text <> "" Then
-    '        Dim tt() As String = Split(frm.txtIndirectAddress.Text, ",")
-    '        For Each a As String In tt
-    '            If a <> "" Then
-    '                Dim tMemory As memoryByte = read(Convert.ToUInt16(a, 16), PrgByteType.PEEK)
-    '                splitSection(UInt32.MaxValue, tMemory.source.ID)
-    '            End If
-    '        Next
-    '    End If
+            Dim flgC, flgZ, flgI, flgD, flgV, flgN As Boolean
+            fullCode(i).getRequiredFlags(flgC, flgZ, flgI, flgD, flgV, flgN)
+            Dim regReqirements As List(Of memoryTarget) = fullCode(i).getRequiredMemoryTarget()
+            Dim regA As Boolean = False
+            Dim regX As Boolean = False
+            Dim regY As Boolean = False
+            For Each m As memoryTarget In regReqirements
+                If m.realAddress.Type = MemoryType.CPU_REG Then
+                    Select Case m.realAddress.ID
+                        Case CpuRegister.a
+                            regA = True
+                        Case CpuRegister.x
+                            regX = True
+                        Case CpuRegister.y
+                            regY = True
+                    End Select
+                End If
+            Next
+            If fullCode(i).backSource.Count > 0 And (flgC Or flgZ Or flgI Or flgD Or flgV Or flgN Or regA Or regX Or regY) Then
+                tmpTracedAddress.Clear()
+                For Each b As UInt32 In fullCode(i).backSource
+                    If fullCode(i - 1).realAddress = b Then
+                        traceRequireChanges(fullCode(i).realAddress, i - 1, flgC, flgZ, flgI, flgD, flgV, flgN, regA, regX, regY)
+                    Else
+                        traceRequireChanges(fullCode(i).realAddress, findInstructionIndex(b, 0, fullCode.Count - 1), flgC, flgZ, flgI, flgD, flgV, flgN, regA, regX, regY)
+                    End If
+                Next
+            End If
+        Next
 
-    '    For i As Integer = 0 To fullCode.Count - 1
-    '        If fullCode(i).type = InstructionType.SUBROUTINE Then
-    '            Dim bi As instSubroutine = CType(fullCode(i), instSubroutine)
-    '            splitSection(UInt32.MaxValue, bi.subRealAddress)
-    '        End If
-    '    Next
+        simplify()
 
-    '    Dim sectionAdded As Boolean = True
-    '    While sectionAdded
-    '        sectionAdded = False
-    '        For i As Integer = 0 To fullCode.Count - 1
-    '            Select Case fullCode(i).type
-    '                Case InstructionType.BRANCH, InstructionType.COMPARE_BRANCH, InstructionType.LOAD_BRANCH
-    '                    Dim b As instPBranch = CType(fullCode(i), instPBranch)
-    '                    sectionAdded = sectionAdded Or splitSection(b.realAddress, b.branchToAddress)
-    '                Case InstructionType.JUMP
-    '                    Dim b As instJump = CType(fullCode(i), instJump)
-    '                    If Not b.isIndirect Then
-    '                        sectionAdded = sectionAdded Or splitSection(b.realAddress, b.jumpToRealAddress)
-    '                    Else
-    '                        For Each tAddress As UInt32 In b.indirectJumpRealTargets
-    '                            sectionAdded = sectionAdded Or splitSection(UInt32.MaxValue, tAddress)
-    '                        Next
-    '                    End If
-    '            End Select
-    '        Next
-    '    End While
-    '    codeSections.Sort(New addressRangeDestComparer)
+        'split into sections
+        codeSections.Clear()
+        Dim section As addressRange
+        section.rangeStart = fullCode(0).realAddress
+        section.rangeEnd = fullCode(fullCode.Count - 1).realAddress
+        codeSections.Add(section)
 
-    '    Dim s As String = ""
-    '    For Each i As instruction In fullCode
-    '        s &= i.printTraceResult
-    '    Next
-    '    frm.txtAnaCode2.Text = s
 
-    '    s = ""
-    '    For Each i As addressRange In codeSections
-    '        s &= "Section " & realAddressToHexStr(i.rangeStart) & vbCrLf
-    '        Dim idx As Integer = findInstructionIndex(i.rangeStart, 0, fullCode.Count - 1)
-    '        Dim sectionEnded As Boolean = False
-    '        Do Until sectionEnded
-    '            Dim tInst As instruction = fullCode(idx)
-    '            If tInst.realAddress > i.rangeEnd Then
-    '                sectionEnded = True
-    '            Else
-    '                For Each b As UInt32 In tInst.backSource
-    '                    If (b < i.rangeStart Or b > i.rangeEnd) And Not tInst.subReturnAddresses.Contains(b) Then
-    '                        s &= "  " & realAddressToHexStr(tInst.realAddress) & " ENT " & realAddressToHexStr(b) & vbCrLf
-    '                    End If
-    '                Next
+        splitSection(UInt32.MaxValue, resetAddress)
+        splitSection(UInt32.MaxValue, nmiAddress)
+        If hasBrk And Not brkTraced Then
+            splitSection(UInt32.MaxValue, brkAddress)
+        End If
 
-    '                Select Case tInst.type
-    '                    Case InstructionType.BRANCH, InstructionType.COMPARE_BRANCH, InstructionType.LOAD_BRANCH
-    '                        Dim b As instPBranch = CType(tInst, instPBranch)
-    '                        s &= "  " & realAddressToHexStr(b.realAddress) & " BCH " & realAddressToHexStr(b.branchToAddress) & vbCrLf
-    '                    Case InstructionType.JUMP
-    '                        Dim b As instJump = CType(tInst, instJump)
-    '                        If Not b.isIndirect Then
-    '                            s &= "  " & realAddressToHexStr(b.realAddress) & " JMP " & realAddressToHexStr(b.jumpToRealAddress) & vbCrLf
-    '                        Else
-    '                            s &= "  " & realAddressToHexStr(b.realAddress) & " JMP " & b.getIndirectJumpTargetString & vbCrLf
-    '                        End If
-    '                    Case InstructionType.SUBROUTINE
-    '                        Dim b As instSubroutine = CType(tInst, instSubroutine)
-    '                        s &= "  " & realAddressToHexStr(b.realAddress) & " JSR " & realAddressToHexStr(b.subRealAddress) & vbCrLf
-    '                    Case InstructionType.SUB_RETURN
-    '                        Dim b As instSubReturn = CType(tInst, instSubReturn)
-    '                        s &= "  " & realAddressToHexStr(b.realAddress) & " RTS " & IIf(b.returnType = SubReturnType.NORMAL, "Normal", IIf(b.returnType = SubReturnType.SKIP_TO_PREVIOUS, "Skip", "Jump")) & vbCrLf
+        If frm.txtIndirectAddress.Text <> "" Then
+            Dim tt() As String = Split(frm.txtIndirectAddress.Text, ",")
+            For Each a As String In tt
+                If a <> "" Then
+                    Dim tMemory As memoryByte = read(Convert.ToUInt16(a, 16), PrgByteType.PEEK)
+                    splitSection(UInt32.MaxValue, tMemory.source.ID)
+                End If
+            Next
+        End If
 
-    '                End Select
-    '            End If
-    '            idx += 1
-    '            If idx > fullCode.Count - 1 Then
-    '                sectionEnded = True
-    '            End If
-    '        Loop
-    '        s &= "End " & realAddressToHexStr(i.rangeEnd) & vbCrLf & vbCrLf
-    '    Next
-    '    frm.txtAnaCode3.Text = s
+        For i As Integer = 0 To fullCode.Count - 1
+            If fullCode(i).type = InstructionType.SUBROUTINE Then
+                Dim bi As instSubroutine = CType(fullCode(i), instSubroutine)
+                splitSection(UInt32.MaxValue, bi.subRealAddress)
+            End If
+        Next
 
-    '    convertToBlocks()
-    '    s = ""
-    '    For Each bl As block In blocks
-    '        s &= bl.saveToString
-    '    Next
-    '    frm.txtAnaCode4.Text = s
-    'End Sub
+        Dim sectionAdded As Boolean = True
+        While sectionAdded
+            sectionAdded = False
+            For i As Integer = 0 To fullCode.Count - 1
+                Select Case fullCode(i).type
+                    Case InstructionType.BRANCH, InstructionType.COMPARE_BRANCH, InstructionType.LOAD_BRANCH
+                        Dim b As instPBranch = CType(fullCode(i), instPBranch)
+                        sectionAdded = sectionAdded Or splitSection(b.realAddress, b.branchToAddress)
+                    Case InstructionType.JUMP
+                        Dim b As instJump = CType(fullCode(i), instJump)
+                        If Not b.isIndirect Then
+                            sectionAdded = sectionAdded Or splitSection(b.realAddress, b.jumpToRealAddress)
+                        Else
+                            For Each tAddress As UInt32 In b.indirectJumpRealTargets
+                                sectionAdded = sectionAdded Or splitSection(UInt32.MaxValue, tAddress)
+                            Next
+                        End If
+                End Select
+            Next
+        End While
+        codeSections.Sort(New addressRangeDestComparer)
+
+        Dim s As String = ""
+        For Each i As instruction In fullCode
+            s &= i.printTraceResult
+        Next
+        frm.txtAnaCode2.Text = s
+
+        s = ""
+        For Each i As addressRange In codeSections
+            s &= "Section " & realAddressToHexStr(i.rangeStart) & vbCrLf
+            Dim idx As Integer = findInstructionIndex(i.rangeStart, 0, fullCode.Count - 1)
+            Dim sectionEnded As Boolean = False
+            Do Until sectionEnded
+                Dim tInst As instruction = fullCode(idx)
+                If tInst.realAddress > i.rangeEnd Then
+                    sectionEnded = True
+                Else
+                    For Each b As UInt32 In tInst.backSource
+                        If (b < i.rangeStart Or b > i.rangeEnd) And Not tInst.subReturnAddresses.Contains(b) Then
+                            s &= "  " & realAddressToHexStr(tInst.realAddress) & " ENT " & realAddressToHexStr(b) & vbCrLf
+                        End If
+                    Next
+
+                    Select Case tInst.type
+                        Case InstructionType.BRANCH, InstructionType.COMPARE_BRANCH, InstructionType.LOAD_BRANCH
+                            Dim b As instPBranch = CType(tInst, instPBranch)
+                            s &= "  " & realAddressToHexStr(b.realAddress) & " BCH " & realAddressToHexStr(b.branchToAddress) & vbCrLf
+                        Case InstructionType.JUMP
+                            Dim b As instJump = CType(tInst, instJump)
+                            If Not b.isIndirect Then
+                                s &= "  " & realAddressToHexStr(b.realAddress) & " JMP " & realAddressToHexStr(b.jumpToRealAddress) & vbCrLf
+                            Else
+                                s &= "  " & realAddressToHexStr(b.realAddress) & " JMP " & b.getIndirectJumpTargetString & vbCrLf
+                            End If
+                        Case InstructionType.SUBROUTINE
+                            Dim b As instSubroutine = CType(tInst, instSubroutine)
+                            s &= "  " & realAddressToHexStr(b.realAddress) & " JSR " & realAddressToHexStr(b.subRealAddress) & vbCrLf
+                        Case InstructionType.SUB_RETURN
+                            Dim b As instSubReturn = CType(tInst, instSubReturn)
+                            s &= "  " & realAddressToHexStr(b.realAddress) & " RTS " & IIf(b.returnType = SubReturnType.NORMAL, "Normal", IIf(b.returnType = SubReturnType.SKIP_TO_PREVIOUS, "Skip", "Jump")) & vbCrLf
+
+                    End Select
+                End If
+                idx += 1
+                If idx > fullCode.Count - 1 Then
+                    sectionEnded = True
+                End If
+            Loop
+            s &= "End " & realAddressToHexStr(i.rangeEnd) & vbCrLf & vbCrLf
+        Next
+        frm.txtAnaCode3.Text = s
+
+        convertToBlocks()
+        s = ""
+        For Each bl As block In blocks
+            s &= bl.saveToString
+        Next
+        frm.txtAnaCode4.Text = s
+    End Sub
 
     'Public Function splitSection(sourceAddress As UInt32, jumpAddress As UInt32) As Boolean
     '    Dim j As Integer = 0
@@ -713,27 +700,27 @@ Module analyzer
     '    Return False
     'End Function
 
-    'Public Sub loadBlocksFromString(s As String)
-    '    Do Until s = ""
-    '        If s.StartsWith("Indirect:") Then
-    '            frm.txtIndirectAddress.Text = s.Substring(9).Trim()
-    '            s = ""
-    '        Else
-    '            Dim b As New block
-    '            b.loadFromString(s)
-    '            lines.Add(b)
-    '            Select Case b.type
-    '                Case BlockType.RESET
-    '                    resetAddress = b.realAddress
-    '                Case BlockType.NMI
-    '                    nmiAddress = b.realAddress
-    '                Case BlockType.BRK
-    '                    brkAddress = b.realAddress
-    '                    hasBrk = True
-    '            End Select
-    '        End If
-    '    Loop
-    'End Sub
+    Public Sub loadBlocksFromString(s As String)
+        Do Until s = ""
+            If s.StartsWith("Indirect:") Then
+                frm.txtIndirectAddress.Text = s.Substring(9).Trim()
+                s = ""
+            Else
+                Dim b As New block
+                b.loadFromString(s)
+                lines.Add(b)
+                Select Case b.type
+                    Case BlockType.RESET
+                        resetAddress.Add(b.realAddress)
+                    Case BlockType.NMI
+                        nmiAddress.Add(b.realAddress)
+                    Case BlockType.BRK
+                        brkAddress.Add(b.realAddress)
+                        hasBrk = True
+                End Select
+            End If
+        Loop
+    End Sub
 
     'Private Sub traceBranch(t As traceTask)
     '    Dim tSetting As New traceSetting

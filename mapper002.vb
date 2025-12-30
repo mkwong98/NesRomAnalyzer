@@ -4,8 +4,10 @@
     Private prgROMLarge As Boolean
     Private prgRAMSize As UInt32
 
-    Public Overrides Function getActualAddress(address As UShort, config As bankConfig) As List(Of memoryID)
-        Return New List(Of memoryID)
+    Public Overrides Function getActualAddress(address As UShort, config As String) As List(Of memoryID)
+        Dim r As New List(Of memoryID)
+        r.Add(New memoryID)
+        Return r
     End Function
 
     Public Overrides Sub setMemorySize(type As MemoryType, size As UInt32)

@@ -60,13 +60,13 @@ Public Class frmMain
     End Sub
 
     Private Sub btnLoadAna_Click(sender As Object, e As EventArgs) Handles btnLoadAna.Click
-        'If ofdAnaFile.ShowDialog = DialogResult.OK Then
-        '    Dim fs = My.Computer.FileSystem.OpenTextFileReader(ofdAnaFile.FileName)
-        '    txtAnaCode.Text = fs.ReadToEnd()
-        '    fs.Close()
-        '    analyzer.loadBlocksFromString(txtAnaCode.Text)
-        '    console.init()
-        'End If
+        If ofdAnaFile.ShowDialog = DialogResult.OK Then
+            Dim fs = My.Computer.FileSystem.OpenTextFileReader(ofdAnaFile.FileName)
+            txtAnaCode.Text = fs.ReadToEnd()
+            fs.Close()
+            analyzer.loadBlocksFromString(txtAnaCode.Text)
+            console.init()
+        End If
     End Sub
 
     Private Sub btnAnalyse_Click(sender As Object, e As EventArgs) Handles btnAnalyse.Click
@@ -105,7 +105,7 @@ Public Class frmMain
 
     Private Sub updateIndirectJumpTarget()
         If lsvIndirectJmp.SelectedItems.Count = 0 Then Return
-        Dim itx = lsvIndirectJmp.SelectedItems(0)
+        Dim itx As ListViewItem = lsvIndirectJmp.SelectedItems(0)
         Dim r As String = ""
         For Each a As String In cboTargetAddress.Items
             If r <> "" Then
@@ -127,7 +127,7 @@ Public Class frmMain
 
     Private Sub lsvBanks_ItemSelectionChanged(sender As Object, e As ListViewItemSelectionChangedEventArgs) Handles lsvBanks.ItemSelectionChanged
         If e.IsSelected Then
-            Dim addresses = Split(e.Item.SubItems(2).Text, ",")
+            Dim addresses As String() = Split(e.Item.SubItems(3).Text, ",")
             cboMapToAddress.Items.Clear()
             cboMapToAddress.Items.AddRange(addresses)
         End If
@@ -153,15 +153,14 @@ Public Class frmMain
 
     Private Sub updateMappingTarget()
         If lsvBanks.SelectedItems.Count = 0 Then Return
-        Dim itx = lsvBanks.SelectedItems(0)
-        Dim r As String = ""
+        Dim itx As ListViewItem = lsvBanks.SelectedItems(0)
+        itx.SubItems(3).Text = ""
         For Each a As String In cboMapToAddress.Items
-            If r <> "" Then
-                r = r & ","
+            If itx.SubItems(3).Text <> "" Then
+                itx.SubItems(3).Text &= ","
             End If
-            r = r & a
+            itx.SubItems(3).Text &= a
         Next
-        itx.SubItems(2).Text = r
     End Sub
 
     Private Sub txtFilePath_TextChanged(sender As Object, e As EventArgs) Handles txtFilePath.TextChanged
@@ -172,21 +171,38 @@ Public Class frmMain
         fileRead = readRomFile(txtFilePath.Text)
         If fileRead Then
             lsvIndirectJmp.Items.Clear()
-            lstModes.Items.Clear()
             lsvBanks.Items.Clear()
 
-            For Each m As mode In rom.getModes()
-                lstModes.Items.Add(m.name)
-            Next
-            For i As Integer = 0 To lstModes.Items.Count - 1
-                lstModes.SetSelected(i, rom.getModes()(i).enabled)
-            Next
-
             For Each i As bankRange In rom.getBankRanges()
-                Dim itx As New ListViewItem({i.name, realAddressToHexStr(i.size)})
+                Dim itx As New ListViewItem({i.name, realAddressToHexStr(i.size), i.id})
+                itx.SubItems.Add("")
+                For Each addr As UInt32 In i.mappedAddresses
+                    If itx.SubItems(3).Text <> "" Then
+                        itx.SubItems(3).Text &= ","
+                    End If
+                    itx.SubItems(3).Text &= realAddressToHexStr(addr)
+                Next
                 lsvBanks.Items.Add(itx)
             Next
+            updateMappingTarget()
         End If
 
     End Sub
+
+    Private Sub btnMappingActivationAdd_Click(sender As Object, e As EventArgs) Handles btnMappingActivationAdd.Click
+        Dim addresss() As String = Split(txtMappingSet.Text, ",")
+        For Each addr As String In addresss
+            If addr.Length > 0 Then
+                Dim itx As New ListViewItem({txtMappingActivation.Text, addr})
+                lsvMappingActivation.Items.Add(itx)
+            End If
+        Next
+    End Sub
+
+    Private Sub btnMappingActivationRemove_Click(sender As Object, e As EventArgs) Handles btnMappingActivationRemove.Click
+        If lsvMappingActivation.SelectedItems.Count > 0 Then
+            lsvMappingActivation.Items.Remove(lsvMappingActivation.SelectedItems(0))
+        End If
+    End Sub
+
 End Class
