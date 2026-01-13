@@ -145,7 +145,6 @@ Module cpu
         'read instruction
         Dim opCode As memoryByte
         Dim pcVal As UInt16
-        Dim lastCode As UInt32 = UInt32.MaxValue
         opCode = readRealAddress(currentRealAddress, PrgByteType.CODE_HEAD)
         opCode.source.config = taskConfig
         pcVal = CInt(pc(1).currentValue) << 8 Or pc(0).currentValue
@@ -162,7 +161,6 @@ Module cpu
                 incPC()
                 currentRealAddress += 1
                 isRunning = runOpCode(opCode, pcVal, currentRealAddress)
-                lastCode = opCode.source.ID
                 pcVal = CInt(pc(1).currentValue) << 8 Or pc(0).currentValue
             End If
 
@@ -243,6 +241,9 @@ Module cpu
                 stillRunning = False
             Case "JSR"
                 tAddress = CInt(operand(1).currentValue) << 8 Or operand(0).currentValue
+                Dim tInst As New instSubroutine
+                tInst.restoreFlags = False
+                tInst.subAddress = tAddress
                 tMBList = read(tAddress, PrgByteType.PEEK, taskConfig)
                 For Each tMemory In tMBList
                     addJSRTask(tMemory.source)
@@ -250,11 +251,8 @@ Module cpu
                         tRemarks &= "/"
                     End If
                     tRemarks &= realAddressToHexStr(tMemory.source.ID)
+                    tInst.subRealAddress.Add(tMemory.source.ID)
                 Next
-
-                Dim tInst As New instSubroutine
-                tInst.restoreFlags = False
-                tInst.subAddress = tAddress
                 oInst = tInst
             Case "JMP"
                 tAddress = CInt(operand(1).currentValue) << 8 Or operand(0).currentValue
@@ -294,6 +292,7 @@ Module cpu
                         tRemarks &= "/"
                     End If
                     tRemarks &= realAddressToHexStr(tMemory.source.ID)
+                    tInst.jumpToRealAddress.Add(tMemory.source.ID)
                 Next
                 If Not hasUnknown Then
                     stillRunning = False
@@ -511,6 +510,7 @@ Module cpu
                     tAddress -= &H100
                 End If
                 tAddress += operand(0).currentValue
+                tInst.branchAddress = tAddress
                 tMBList = read(tAddress, PrgByteType.PEEK, taskConfig)
                 For Each tMemory In tMBList
                     If Not tMemory.known Then
@@ -1020,6 +1020,5 @@ Module cpu
         op.length = length
         op.mode = mode
     End Sub
-
 
 End Module

@@ -70,11 +70,11 @@ Public Class frmMain
     End Sub
 
     Private Sub btnAnalyse_Click(sender As Object, e As EventArgs) Handles btnAnalyse.Click
-        'analyse()
+        analyse()
     End Sub
 
     Private Sub btnGenerate_Click(sender As Object, e As EventArgs) Handles btnGenerate.Click
-        'generate()
+        generate()
     End Sub
 
     Private Sub lsvIndirectJmp_ItemSelectionChanged(sender As Object, e As ListViewItemSelectionChangedEventArgs) Handles lsvIndirectJmp.ItemSelectionChanged

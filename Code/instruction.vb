@@ -195,9 +195,9 @@ Public MustInherit Class instruction
         i = s.IndexOf("JUMP=")
         isJumpTarget = s.Substring(i + 5, 1) = "T"
         i = s.IndexOf("CONFIG=")
-        config = s.Substring(i + 2)
-        i = s.IndexOf("ADDRESS=")
-        config = Convert.ToUInt32(s.Substring(i + 2), 16)
+        j = s.IndexOf("ADDRESS=")
+        config = s.Substring(i + 7, j - i - 7)
+        address = Convert.ToUInt32(s.Substring(j + 8), 16)
     End Sub
 
     Public Overrides Function saveToString() As String

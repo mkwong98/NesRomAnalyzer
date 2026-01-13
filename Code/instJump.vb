@@ -2,9 +2,10 @@
     Inherits instruction
 
     Public isIndirect As Boolean
-    Public jumpToRealAddress As New List(Of UInt32)
     Public jumpToAddress As UInt16
+    Public jumpToRealAddress As New List(Of UInt32)
     Public indirectJumpTargets As New List(Of UInt16)
+    Public indirectJumpTargetConfigs As New List(Of String)
     Public indirectJumpRealTargets As New List(Of UInt32)
 
     Public Sub New()
@@ -57,7 +58,13 @@
         Dim t() As String = Split(r, ",")
         For Each a As String In t
             If a <> "" Then
-                indirectJumpTargets.Add(Convert.ToUInt16(a, 16))
+                Dim c() As String = Split(a, "@")
+                indirectJumpTargets.Add(Convert.ToUInt16(c(0), 16))
+                If c.Length > 1 Then
+                    indirectJumpTargetConfigs.Add(c(1))
+                Else
+                    indirectJumpTargetConfigs.Add("")
+                End If
             End If
         Next
     End Sub
