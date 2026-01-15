@@ -54,7 +54,11 @@ Public Class instJumpBlock
                 s &= tabStr & "if (handleReturnAddress(poppedEntry.value, 0x" & realAddressToHexStr(realAddress + 2) & ")) return;" & vbCrLf
 
             Case JumpBlockType.JMP
-                s &= tabStr & blockName & vbCrLf
+                s &= tabStr & blockName
+                If blockName.StartsWith("SUB") Then
+                    s &= "();"
+                End If
+                s &= vbCrLf
                 s &= tabStr & "return;" & vbCrLf
 
             Case JumpBlockType.BRK

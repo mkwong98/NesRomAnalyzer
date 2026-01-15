@@ -1735,7 +1735,7 @@ Module analyzer
                                 If hasOutOfRange Or jInst.jumpToRealAddress.Count > 1 Then
                                     'convert to jump block
                                     newJump.jumpType = JumpBlockType.JMP
-                                    newJump.blockName = "jump(" & addressToHexStr(jInst.jumpToAddress) & ");"
+                                    newJump.blockName = "jump(0x" & addressToHexStr(jInst.jumpToAddress) & ");"
                                     addJumpAddress(jInst.jumpToRealAddress(0))
                                 Else
                                     'convert to goto
@@ -1769,7 +1769,7 @@ Module analyzer
                         Dim bInst As instSubroutine = pBlock.code(sdx)
                         Dim i As New instJumpBlock
                         i.backSource.AddRange(bInst.backSource)
-                        i.blockName = "jump(" & addressToHexStr(bInst.subAddress) & ");"
+                        i.blockName = "jump(0x" & addressToHexStr(bInst.subAddress) & ");"
                         addJumpAddress(bInst.subRealAddress(0))
                         i.isJumpTarget = bInst.isJumpTarget
                         If bInst.restoreFlags Then
@@ -2189,7 +2189,7 @@ Module analyzer
         If type = JumpBlockType.JGT Then
             newJump.blockName = "L_" & realAddressToHexStr(bInst.branchToAddress(0))
         Else
-            newJump.blockName = "jump(" & addressToHexStr(bInst.branchAddress) & ");"
+            newJump.blockName = "jump(0x" & addressToHexStr(bInst.branchAddress) & ");"
             addJumpAddress(bInst.branchToAddress(0))
         End If
         ifPart.addCodeBlock(newJump)
@@ -2238,7 +2238,7 @@ Module analyzer
 
         If jumpRealAddress.Count > 0 Then
             s &= "void game::jump(Uint16 target){" & vbCrLf
-            s &= "    Uint32 tAddress = readRealAddress(target);" & vbCrLf
+            s &= "    Uint32 tAddress = myMapper->readRealAddress(target);" & vbCrLf
             s &= "    switch(tAddress){" & vbCrLf
             For Each a As UInt32 In jumpRealAddress
                 s &= "    case 0x" & realAddressToHexStr(a) & ":" & vbCrLf

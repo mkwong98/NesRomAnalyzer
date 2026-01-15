@@ -71,7 +71,7 @@
 
     Public Overrides Function printToCode(tabStr As String) As String
         Dim s As String = printLabel()
-        s &= tabStr & "indirectJump(myMapper->readCPU(0x" & addressToHexStr(jumpToAddress) & ") + (myMapper->readCPU((0x" & addressToHexStr(jumpToAddress) & " + 1) & 0x00ff) << 8));" & vbCrLf
+        s &= tabStr & "jump(myMapper->readCPU(0x" & addressToHexStr(jumpToAddress) & ") + (myMapper->readCPU((0x" & addressToHexStr(jumpToAddress) & " + 1) & 0x00ff) << 8));" & vbCrLf
         Return s
     End Function
 End Class
