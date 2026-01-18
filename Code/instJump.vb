@@ -35,6 +35,9 @@
                 l.Add(t)
             Next
         End If
+        l.Add(createCPURegisterMemoryTarget(CpuRegister.x))
+        l.Add(createCPURegisterMemoryTarget(CpuRegister.y))
+        l.Add(createCPURegisterMemoryTarget(CpuRegister.a))
         Return l
     End Function
 

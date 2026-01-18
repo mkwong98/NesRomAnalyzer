@@ -24,6 +24,14 @@
         Return getRealJumpTargetString() & ";" & addressToHexStr(subAddress) & ";" & restoreFlags.ToString
     End Function
 
+    Public Overrides Function getRequiredMemoryTarget() As List(Of memoryTarget)
+        Dim l As New List(Of memoryTarget)
+        l.Add(createCPURegisterMemoryTarget(CpuRegister.x))
+        l.Add(createCPURegisterMemoryTarget(CpuRegister.y))
+        l.Add(createCPURegisterMemoryTarget(CpuRegister.a))
+        Return l
+    End Function
+
     Public Sub readRealJumpTargetString(r As String)
         subRealAddress.Clear()
         Dim t() As String = Split(r, ",")

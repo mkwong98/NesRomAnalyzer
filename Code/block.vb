@@ -148,6 +148,7 @@ Public Class block
                 type = BlockType.LOOP_CONTENT
         End Select
         realAddress = Convert.ToInt32(s1(3).Trim.Substring("Entry=".Length).Trim, 16)
+        address = Convert.ToInt32(s1(4).Trim.Substring("Address=".Length).Trim, 16)
 
         'read code lines
         Do Until r.StartsWith("END BLOCK")
@@ -188,7 +189,8 @@ Public Class block
             Case BlockType.LOOP_CONTENT
                 r &= "LOOP_CONTENT"
         End Select
-        r &= ", Entry=" & realAddressToHexStr(realAddress) & vbCrLf
+        r &= ", Entry=" & realAddressToHexStr(realAddress)
+        r &= ", Address=" & addressToHexStr(address) & vbCrLf
 
         For Each c As codeBlock In code
             r &= c.saveToString

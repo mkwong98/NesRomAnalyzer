@@ -528,6 +528,16 @@ Module analyzer
             Next
         End If
 
+        For Each tRange As addressRange In jumpLinks
+            t = New traceTask
+            t.name = "SUB"
+            t.realAddress = tRange.rangeStart
+            t.type = TaskType.JSR
+            t.source = UInt32.MaxValue
+            traceTasksToRun.Add(t)
+            traceBranch(t)
+        Next
+
         If frm.txtIndirectAddress.Text <> "" Then
             Dim tt() As String = Split(frm.txtIndirectAddress.Text, ",")
             For Each a As String In tt
@@ -552,10 +562,14 @@ Module analyzer
         End If
 
 
+
+
         'trace all required reg and flag changes
         For i As Integer = 1 To fullCode.Count - 1
             frm.lblRemark.Text = i & " / " & fullCode.Count
-
+            If fullCode(i).realAddress = &H1F14C Then
+                Dim debug = 1
+            End If
             Dim flgC, flgZ, flgI, flgD, flgV, flgN As Boolean
             fullCode(i).getRequiredFlags(flgC, flgZ, flgI, flgD, flgV, flgN)
             Dim regReqirements As List(Of memoryTarget) = fullCode(i).getRequiredMemoryTarget()
@@ -823,6 +837,10 @@ Module analyzer
         Do Until traceEnd
             tInst = fullCode(p)
 
+            If tInst.realAddress = &H1F14C Then
+                Dim debug = 1
+            End If
+
             Dim isNew As Boolean = tInst.traceMarking = ""
             Dim traceName As String = t.name & "@" & realAddressToHexStr(backAddress)
             If Not tInst.traceMarking.Contains(traceName) Then
@@ -925,7 +943,7 @@ Module analyzer
 
                     Case InstructionType.SUB_RETURN
                         Dim b As instSubReturn = CType(tInst, instSubReturn)
-                        If b.restoreFlags Then
+                        If b.restoreFlags And ts.stack.Count > 0 Then
                             'pop flags from stack
                             ts.stack.RemoveAt(ts.stack.Count - 1)
                         End If
@@ -1173,6 +1191,7 @@ Module analyzer
                     If b.destination.addrMode = AddressingMode.IMPLICIT And b2.source.addrMode = AddressingMode.IMPLICIT _
                         And b.destination.realAddress.Type = MemoryType.CPU_REG And b2.source.realAddress.Type = MemoryType.CPU_REG _
                         And b.destination.realAddress.ID = b2.source.realAddress.ID Then
+
                         'check if the transfer to register is overwritten before being used later
                         Dim regNotRequired As Boolean = False
                         Select Case b.destination.realAddress.ID
@@ -1256,6 +1275,7 @@ Module analyzer
                             'can be combined
                             Dim newCompare As New instDirectCompare With {
                                 .realAddress = b.realAddress,
+                                .address = b.address,
                                 .operand1 = b.source,
                                 .operand2 = b2.operand2,
                                 .opName = b.opName & "+" & b2.opName,
@@ -1292,10 +1312,12 @@ Module analyzer
                         'can be combined
                         Dim newBranch As New instCompareBranch With {
                             .realAddress = b.realAddress,
+                            .address = b.address,
                             .operand1 = codeBlock.createCPURegisterMemoryTarget(b.operand1),
                             .operand2 = b.operand2,
                             .opName = b.opName & "+" & b2.opName,
                             .branchToAddress = b2.branchToAddress,
+                            .branchAddress = b2.branchAddress,
                             .useFlag = b2.useFlag,
                             .flagIsSet = b2.flagIsSet,
                             .isJumpTarget = b.isJumpTarget,
@@ -1332,10 +1354,12 @@ Module analyzer
                         'can be combined
                         Dim newBranch As New instCompareBranch With {
                             .realAddress = b.realAddress,
+                            .address = b.address,
                             .operand1 = b.operand1,
                             .operand2 = b.operand2,
                             .opName = b.opName & "+" & b2.opName,
                             .branchToAddress = b2.branchToAddress,
+                            .branchAddress = b2.branchAddress,
                             .useFlag = b2.useFlag,
                             .flagIsSet = b2.flagIsSet,
                             .isJumpTarget = b.isJumpTarget,
@@ -1392,9 +1416,11 @@ Module analyzer
                             'can be combined
                             Dim newBranch As New instLoadBranch With {
                                 .realAddress = b.realAddress,
+                                .address = b.address,
                                 .operand = b.source,
                                 .opName = b.opName & "+" & b2.opName,
                                 .branchToAddress = b2.branchToAddress,
+                                .branchAddress = b2.branchAddress,
                                 .useFlag = b2.useFlag,
                                 .flagIsSet = b2.flagIsSet,
                                 .isJumpTarget = b.isJumpTarget,
@@ -1439,6 +1465,7 @@ Module analyzer
                     If repeatCount > 0 Then
                         Dim newModify As New instRepeatedModify With {
                             .realAddress = b.realAddress,
+                            .address = b.address,
                             .operand = b.operand,
                             .opName = b.opName & "x" & (repeatCount + 1).ToString,
                             .isJumpTarget = b.isJumpTarget,
@@ -1511,6 +1538,7 @@ Module analyzer
 
             tInst = fullCode(idx)
             newBlock.realAddress = tInst.realAddress
+            newBlock.address = tInst.address
             newBlock.addCodeBlock(tInst)
             idx += 1
             Do Until idx > idxEnd
@@ -1620,7 +1648,8 @@ Module analyzer
                         Dim newLoop As New block With {
                             .type = BlockType.INFINITE_LOOP,
                             .name = "INFINITE_LOOP_" & realAddressToHexStr(b.codeRange.rangeStart),
-                            .realAddress = b.codeRange.rangeStart
+                            .realAddress = b.codeRange.rangeStart,
+                            .address = b.address
                         }
                         newLoop.addCodeBlock(b.code(0))
                         blocks.Add(newLoop)
@@ -1679,6 +1708,7 @@ Module analyzer
                 Dim newJump As New instJumpBlock
                 newJump.opName = "JBL"
                 newJump.realAddress = getLastInst(tblock).realAddress + 1
+                newJump.address = getLastInst(tblock).address + 1
                 newJump.jumpType = JumpBlockType.JMP
                 newJump.blockName = "SUB_" & realAddressToHexStr(tblock2.codeRange.rangeStart)
                 tblock.addCodeBlock(newJump)
@@ -1720,6 +1750,7 @@ Module analyzer
                                 Dim newJump As New instJumpBlock
                                 newJump.opName = "JBL"
                                 newJump.realAddress = jInst.realAddress
+                                newJump.address = jInst.address
                                 newJump.backSource.AddRange(jInst.backSource)
                                 newJump.subReturnAddresses.AddRange(jInst.subReturnAddresses)
                                 newJump.traceMarking = jInst.traceMarking
@@ -1779,6 +1810,7 @@ Module analyzer
                         End If
                         i.opName = "JSB"
                         i.realAddress = bInst.realAddress
+                        i.address = bInst.address
                         i.needLabel = bInst.needLabel
                         pBlock.code(sdx) = i
                 End Select
@@ -1967,6 +1999,7 @@ Module analyzer
                 b1.code.Add(tInst)
                 If b1.code.Count = 1 Then
                     b1.realAddress = tInst.realAddress
+                    b1.address = tInst.address
                 End If
                 b.code.RemoveAt(fromIdx)
                 If fromIdx >= b.code.Count Then
@@ -2002,6 +2035,7 @@ Module analyzer
                             b2.code.Add(tInst)
                             If b2.code.Count = 1 Then
                                 b2.realAddress = tInst.realAddress
+                                b2.address = tInst.address
                             End If
                             b.code.RemoveAt(fromIdx)
                             If fromIdx >= b.code.Count Then
@@ -2031,6 +2065,7 @@ Module analyzer
                 b.flagIsSet = Not b.flagIsSet
                 nBlock.code.Insert(0, b)
                 nBlock.realAddress = b.realAddress
+                nBlock.address = b.address
                 pBlock.code(bIdx) = nBlock
             End If
         End If
@@ -2101,6 +2136,7 @@ Module analyzer
                                         'add condition
                                         ifBlock.code.Add(bInst)
                                         ifBlock.realAddress = bInst.realAddress
+                                        ifBlock.address = bInst.address
                                         'add if part
                                         Dim ifPart As New block
                                         ifPart.type = BlockType.IF_BLOCK
@@ -2109,8 +2145,10 @@ Module analyzer
                                         Dim newJump As New instBreakLoop
                                         newJump.opName = "BREAK"
                                         newJump.realAddress = bInst.realAddress + 1
+                                        newJump.address = bInst.address + 1
                                         ifPart.addCodeBlock(newJump)
                                         ifPart.realAddress = newJump.realAddress
+                                        ifPart.address = newJump.address
                                         codeB.code(cIdx) = ifBlock
                                         hasExit = True
                                     End If
@@ -2144,6 +2182,7 @@ Module analyzer
             If tInst.realAddress >= address Then
                 b1.code.Insert(0, tInst)
                 b1.realAddress = tInst.realAddress
+                b1.address = tInst.address
                 b.code.RemoveAt(fromIdx)
                 fromIdx -= 1
                 If fromIdx < 0 Then
@@ -2154,6 +2193,7 @@ Module analyzer
             End If
         End While
         newBlock.realAddress = b1.realAddress
+        newBlock.address = b1.address
         Return newBlock
     End Function
 
@@ -2176,6 +2216,7 @@ Module analyzer
         'add condition
         ifBlock.code.Add(bInst)
         ifBlock.realAddress = bInst.realAddress
+        ifBlock.address = bInst.address
         'add if part
         Dim ifPart As New block
         ifPart.type = BlockType.IF_BLOCK
@@ -2186,6 +2227,7 @@ Module analyzer
         newJump.jumpType = type
         newJump.opName = "JBL"
         newJump.realAddress = bInst.realAddress + 1
+        newJump.address = bInst.address + 1
         If type = JumpBlockType.JGT Then
             newJump.blockName = "L_" & realAddressToHexStr(bInst.branchToAddress(0))
         Else
@@ -2194,6 +2236,7 @@ Module analyzer
         End If
         ifPart.addCodeBlock(newJump)
         ifPart.realAddress = newJump.realAddress
+        ifPart.address = newJump.address
         Return ifBlock
     End Function
 

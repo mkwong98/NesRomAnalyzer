@@ -49,9 +49,9 @@ Public Class instJumpBlock
         Select Case jumpType
             Case JumpBlockType.JSR
                 'push pc to stack
-                s &= tabStr & "pushAddress(0x" & realAddressToHexStr(realAddress + 2) & ");" & vbCrLf
+                s &= tabStr & "pushAddress(0x" & addressToHexStr(address + 2) & ");" & vbCrLf
                 s &= tabStr & blockName & vbCrLf
-                s &= tabStr & "if (handleReturnAddress(poppedEntry.value, 0x" & realAddressToHexStr(realAddress + 2) & ")) return;" & vbCrLf
+                s &= tabStr & "if (handleReturnAddress(poppedEntry.value, 0x" & addressToHexStr(address + 2) & ")) return;" & vbCrLf
 
             Case JumpBlockType.JMP
                 s &= tabStr & blockName
@@ -62,7 +62,7 @@ Public Class instJumpBlock
                 s &= tabStr & "return;" & vbCrLf
 
             Case JumpBlockType.BRK
-                s &= tabStr & "pushAddress(0x" & realAddressToHexStr(realAddress + 2) & ");" & vbCrLf
+                s &= tabStr & "pushAddress(0x" & addressToHexStr(address + 2) & ");" & vbCrLf
                 s &= tabStr & "flgB = true;" & vbCrLf
                 s &= tabStr & "pushStatus();" & vbCrLf
                 s &= tabStr & blockName & vbCrLf
