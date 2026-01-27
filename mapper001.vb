@@ -97,6 +97,9 @@
                                         r.ID = mapping.mappedAddress + (address - b.startBank)
                                         r.config = switchBank(configS, config)
                                         r.address = address
+                                        If r.ID = &H18299 Then
+                                            Dim debug As Boolean = True
+                                        End If
                                         result.Add(r)
                                     End If
                                 Next

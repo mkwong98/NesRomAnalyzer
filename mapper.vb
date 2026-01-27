@@ -47,15 +47,17 @@ Public MustInherit Class mapper
         Dim banks() As String = Split(fullMappings, "+")
         Dim mapping As New List(Of bankMapping)
         For Each s As String In banks
-            Dim parts() As String = Split(s, ":")
-            Dim id As String = parts(0).Trim
-            Dim addresses() As String = Split(parts(1), "/")
-            For Each addr As String In addresses
-                Dim bm As bankMapping
-                bm.id = id
-                bm.mappedAddress = Convert.ToUInt32(addr.Trim, 16)
-                mapping.Add(bm)
-            Next
+            If s <> "" Then
+                Dim parts() As String = Split(s, ":")
+                Dim id As String = parts(0).Trim
+                Dim addresses() As String = Split(parts(1), "/")
+                For Each addr As String In addresses
+                    Dim bm As bankMapping
+                    bm.id = id
+                    bm.mappedAddress = Convert.ToUInt32(addr.Trim, 16)
+                    mapping.Add(bm)
+                Next
+            End If
         Next
         Return mapping
     End Function

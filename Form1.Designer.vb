@@ -608,7 +608,7 @@ Partial Class frmMain
         txtCCode.Name = "txtCCode"
         txtCCode.ReadOnly = True
         txtCCode.ScrollBars = ScrollBars.Both
-        txtCCode.Size = New Size(1014, 495)
+        txtCCode.Size = New Size(993, 495)
         txtCCode.TabIndex = 1
         ' 
         ' btnGenerate
