@@ -14,6 +14,10 @@
     End Function
 
     Public Overrides Function printToCode(tabStr As String) As String
-        Return tabStr & "//NOP" & vbCrLf
+        If printLabel() <> "" Then
+            Return printLabel() & tabStr & "a = a; //NOP" & vbCrLf
+        Else
+            Return tabStr & "//NOP" & vbCrLf
+        End If
     End Function
 End Class

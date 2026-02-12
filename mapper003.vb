@@ -7,6 +7,7 @@
     Public Overrides Function getActualAddress(address As UShort, config As String) As List(Of memoryID)
         Dim realAddress As memoryID
         realAddress.config = ""
+        realAddress.bank = ""
         If address >= &H8000 Then
             realAddress.Type = MemoryType.PRG_ROM
             If prgROMLarge Then

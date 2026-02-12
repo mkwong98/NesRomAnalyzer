@@ -1,6 +1,4 @@
-﻿
-
-Imports System.Net
+﻿Imports System.Net
 
 Public Enum TaskType
     RESET
@@ -71,6 +69,7 @@ Module analyzer
     Private lines As New List(Of block)
     Private currentTask As Integer
     Private currentBlock As block
+    Private currentBank As Integer = -1
 
     Private fullCode As New List(Of instruction)
     Private nmiAddress As New List(Of UInt32)
@@ -106,7 +105,7 @@ Module analyzer
     End Sub
 
 
-    Public Sub start()
+    Public Sub start(pTraceJump As Boolean)
         If lines.Count > 0 Then
             'clear previous data
             reset()
@@ -211,7 +210,7 @@ Module analyzer
 
             tasksToRun(currentTask) = t
             'start running
-            console.run()
+            console.run(pTraceJump)
             i = frm.lsvOutput.Items.Add("END")
             tasksToRun(currentTask) = t
             currentTask += 1
@@ -240,7 +239,7 @@ Module analyzer
 
     End Sub
 
-    Public Sub startIndirect()
+    Public Sub startIndirect(pTraceJump As Boolean)
         Dim realAddressL As List(Of memoryByte)
         Dim tConfig As String = ""
 
@@ -273,7 +272,7 @@ Module analyzer
 
             tasksToRun(currentTask) = t
             'start running
-            console.run()
+            console.run(pTraceJump)
             i = frm.lsvOutput.Items.Add("END")
             tasksToRun(currentTask) = t
             currentTask += 1
@@ -567,9 +566,6 @@ Module analyzer
         'trace all required reg and flag changes
         For i As Integer = 1 To fullCode.Count - 1
             frm.lblRemark.Text = i & " / " & fullCode.Count
-            If fullCode(i).realAddress = &H1F14C Then
-                Dim debug = 1
-            End If
             Dim flgC, flgZ, flgI, flgD, flgV, flgN As Boolean
             fullCode(i).getRequiredFlags(flgC, flgZ, flgI, flgD, flgV, flgN)
             Dim regReqirements As List(Of memoryTarget) = fullCode(i).getRequiredMemoryTarget()
@@ -836,11 +832,6 @@ Module analyzer
         Dim branchTargets As New List(Of UInt32)
         Do Until traceEnd
             tInst = fullCode(p)
-
-            If tInst.realAddress = &H1F14C Then
-                Dim debug = 1
-            End If
-
             Dim isNew As Boolean = tInst.traceMarking = ""
             Dim traceName As String = t.name & "@" & realAddressToHexStr(backAddress)
             If Not tInst.traceMarking.Contains(traceName) Then
@@ -1768,7 +1759,7 @@ Module analyzer
                                     newJump.jumpType = JumpBlockType.JMP
                                     newJump.blockName = "jump(0x" & addressToHexStr(jInst.jumpToAddress) & ");"
                                     addJumpAddress(jInst.jumpToRealAddress(0))
-                                Else
+                                ElseIf jInst.jumpToRealAddress.Count = 1 Then
                                     'convert to goto
                                     markLabel(pParentBlock, jInst.jumpToRealAddress(0))
                                     newJump.jumpType = JumpBlockType.JGT
@@ -1800,8 +1791,15 @@ Module analyzer
                         Dim bInst As instSubroutine = pBlock.code(sdx)
                         Dim i As New instJumpBlock
                         i.backSource.AddRange(bInst.backSource)
-                        i.blockName = "jump(0x" & addressToHexStr(bInst.subAddress) & ");"
-                        addJumpAddress(bInst.subRealAddress(0))
+                        If bInst.subRealAddress.Count = 1 And bInst.subFixedRealAddress.Count = 1 Then
+                            i.blockName = "SUB_" & realAddressToHexStr(bInst.subRealAddress(0)) & "();"
+                        Else
+                            i.blockName = "jump(0x" & addressToHexStr(bInst.subAddress) & ");"
+                            If bInst.subRealAddress.Count > 0 Then
+                                addJumpAddress(bInst.subRealAddress(0))
+                            End If
+                        End If
+
                         i.isJumpTarget = bInst.isJumpTarget
                         If bInst.restoreFlags Then
                             i.jumpType = JumpBlockType.BRK
@@ -2246,9 +2244,8 @@ Module analyzer
         For Each bl As block In blocks
             s &= bl.printToHeader
         Next
-        If indirectJmpList.Count > 0 Or frm.txtIndirectAddress.Text <> "" Then
-            s &= "void jump(Uint16 target);" & vbCrLf
-        End If
+        s &= "void jump(Uint16 target);" & vbCrLf
+
         frm.txtCHeader.Text = s
 
         s = ""
@@ -2278,20 +2275,17 @@ Module analyzer
             Next
         End If
 
+        s &= "void game::jump(Uint16 target){" & vbCrLf
+        s &= "    Uint32 tAddress = myMapper->readRealAddress(target);" & vbCrLf
+        s &= "    switch(tAddress){" & vbCrLf
+        For Each a As UInt32 In jumpRealAddress
+            s &= "    case 0x" & realAddressToHexStr(a) & ":" & vbCrLf
+            s &= "        SUB_" & realAddressToHexStr(a) & "();" & vbCrLf
+            s &= "        break;" & vbCrLf
+        Next
 
-        If jumpRealAddress.Count > 0 Then
-            s &= "void game::jump(Uint16 target){" & vbCrLf
-            s &= "    Uint32 tAddress = myMapper->readRealAddress(target);" & vbCrLf
-            s &= "    switch(tAddress){" & vbCrLf
-            For Each a As UInt32 In jumpRealAddress
-                s &= "    case 0x" & realAddressToHexStr(a) & ":" & vbCrLf
-                s &= "        SUB_" & realAddressToHexStr(a) & "();" & vbCrLf
-                s &= "        break;" & vbCrLf
-            Next
-
-            s &= "    }" & vbCrLf
-            s &= "}" & vbCrLf
-        End If
+        s &= "    }" & vbCrLf
+        s &= "}" & vbCrLf
         frm.txtCCode.Text = s
     End Sub
 

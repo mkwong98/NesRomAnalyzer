@@ -222,6 +222,7 @@ Module rom
                 mb.currentValue = prgROM(addr.ID)
                 mb.unchanged = True
                 mb.currentUsage = prgLOG(addr.ID)
+                mb.source.bank = addr.bank
                 setMemmoryByteUsage(addr.ID, pReadType)
             End If
             result.Add(mb)

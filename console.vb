@@ -13,8 +13,8 @@
         cpu.setupForTask(t)
     End Sub
 
-    Public Sub run()
-        cpu.run()
+    Public Sub run(pTraceJump As Boolean)
+        cpu.run(pTraceJump)
     End Sub
 
     Public Sub addBankSwitchActivation(mapping As String, address As UInt32)

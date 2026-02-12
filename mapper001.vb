@@ -67,7 +67,6 @@
         Return convertRangesToMappingString(convertMappingsToRanges(mappings))
     End Function
 
-
     Public Overrides Function getActualAddress(address As UShort, configS As String) As List(Of memoryID)
         Dim config As List(Of bankMapping) = convertMappingStringToList(configS)
         Dim result As New List(Of memoryID)
@@ -97,9 +96,7 @@
                                         r.ID = mapping.mappedAddress + (address - b.startBank)
                                         r.config = switchBank(configS, config)
                                         r.address = address
-                                        If r.ID = &H18299 Then
-                                            Dim debug As Boolean = True
-                                        End If
+                                        r.bank = b.id
                                         result.Add(r)
                                     End If
                                 Next
@@ -116,6 +113,7 @@
                                     r.ID = mappedAddress + (address - b.startBank)
                                     r.config = configS
                                     r.address = address
+                                    r.bank = ""
                                     result.Add(r)
                                 Next
                             End If
@@ -123,9 +121,6 @@
                     Next
                 End If
             Next
-
-
-
         End If
 
         Return result

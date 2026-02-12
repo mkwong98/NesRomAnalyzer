@@ -21,6 +21,7 @@ Public Structure memoryID
     Public ID As UInt32
     Public address As UInt16
     Public config As String
+    Public bank As String
 End Structure
 
 
@@ -37,6 +38,7 @@ Module memory
     Public Function read(pAddress As UInt16, pUsage As PrgByteType, pConfig As String) As List(Of memoryByte)
         Dim result As New List(Of memoryByte)
         Dim tMem As memoryByte
+        tMem.source.bank = ""
         If pAddress < &H2000 Then
             tMem.source.Type = MemoryType.RAM
             tMem.source.ID = pAddress And &H7FF

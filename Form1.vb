@@ -26,7 +26,7 @@ Public Class frmMain
             cboTargetAddress.Text = ""
             cboTargetAddress.Items.Clear()
             txtAnaCode.Text = ""
-            analyzer.start()
+            analyzer.start(chkTraceJump.Checked)
         End If
     End Sub
 
@@ -122,7 +122,7 @@ Public Class frmMain
     End Sub
 
     Private Sub btnRunIndirect_Click(sender As Object, e As EventArgs) Handles btnRunIndirect.Click
-        analyzer.startIndirect()
+        analyzer.startIndirect(chkTraceJump.Checked)
     End Sub
 
     Private Sub lsvBanks_ItemSelectionChanged(sender As Object, e As ListViewItemSelectionChangedEventArgs) Handles lsvBanks.ItemSelectionChanged

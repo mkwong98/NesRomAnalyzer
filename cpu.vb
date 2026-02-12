@@ -81,6 +81,7 @@ Module cpu
     Private taskConfig As String
     Private currentRealAddress As UInt32
     Private bankSwitchActivations As List(Of bankSwitchActivation)
+    Private traceJump As Boolean
 
 
     Public Sub init()
@@ -100,6 +101,7 @@ Module cpu
         Dim s As memoryID
         s.Type = MemoryType.INIT
         s.ID = 0
+        s.bank = ""
         a.currentValue = 0
         a.source = s
         x.currentValue = 0
@@ -140,8 +142,9 @@ Module cpu
         currentRealAddress = t.memory.ID
     End Sub
 
-    Public Sub run()
+    Public Sub run(pTraceJump As Boolean)
         Dim isRunning As Boolean = True
+        traceJump = pTraceJump
         'read instruction
         Dim opCode As memoryByte
         Dim pcVal As UInt16
@@ -246,12 +249,17 @@ Module cpu
                 tInst.subAddress = tAddress
                 tMBList = read(tAddress, PrgByteType.PEEK, taskConfig)
                 For Each tMemory In tMBList
-                    addJSRTask(tMemory.source)
-                    If tRemarks <> "" Then
-                        tRemarks &= "/"
+                    If (tMemory.source.bank = "") Or (tMemory.source.bank = operand(0).source.bank) Or traceJump Then
+                        addJSRTask(tMemory.source)
+                        If tRemarks <> "" Then
+                            tRemarks &= "/"
+                        End If
+                        tRemarks &= realAddressToHexStr(tMemory.source.ID)
+                        tInst.subRealAddress.Add(tMemory.source.ID)
+                        If (tMemory.source.bank = "") Or (tMemory.source.bank = operand(0).source.bank) Then
+                            tInst.subFixedRealAddress.Add(tMemory.source.ID)
+                        End If
                     End If
-                    tRemarks &= realAddressToHexStr(tMemory.source.ID)
-                    tInst.subRealAddress.Add(tMemory.source.ID)
                 Next
                 oInst = tInst
             Case "JMP"
@@ -260,6 +268,38 @@ Module cpu
                 tInst.jumpToAddress = tAddress
                 If opTable(pOpCode.currentValue).mode = AddressingMode.ABSOLUTE Then
                     tInst.isIndirect = False
+                    tMBList = read(tAddress, PrgByteType.PEEK, taskConfig)
+                    'check if jump target is known
+                    Dim hasUnknown As Boolean = False
+                    Dim isFirstUnknown As Boolean = True
+                    For Each tMemory In tMBList
+                        If (tMemory.source.bank = "") Or (tMemory.source.bank = operand(0).source.bank) Or traceJump Then
+                            If Not tMemory.known Then
+                                hasUnknown = True
+                                If isFirstUnknown Then
+                                    isFirstUnknown = False
+                                    pc(1).currentValue = operand(1).currentValue
+                                    pc(0).currentValue = operand(0).currentValue
+                                    pRealAddress = tMemory.source.ID
+                                Else
+                                    Dim b As branchEvent
+                                    b.sourceID = pOpCode.source.ID
+                                    b.target = tAddress
+                                    b.opCode = tMemory
+                                    branchAddress.Add(b)
+                                End If
+                            End If
+                            If tRemarks <> "" Then
+                                tRemarks &= "/"
+                            End If
+                            tRemarks &= realAddressToHexStr(tMemory.source.ID)
+                            tInst.jumpToRealAddress.Add(tMemory.source.ID)
+                        End If
+
+                    Next
+                    If Not hasUnknown Then
+                        stillRunning = False
+                    End If
                 Else
                     tInst.isIndirect = True
                     'unknown jump target
@@ -269,34 +309,6 @@ Module cpu
                 End If
                 oInst = tInst
 
-                tMBList = read(tAddress, PrgByteType.PEEK, taskConfig)
-                Dim hasUnknown As Boolean = False
-                Dim isFirstUnknown As Boolean = True
-                For Each tMemory In tMBList
-                    If Not tMemory.known Then
-                        hasUnknown = True
-                        If isFirstUnknown Then
-                            isFirstUnknown = False
-                            pc(1).currentValue = operand(1).currentValue
-                            pc(0).currentValue = operand(0).currentValue
-                            pRealAddress = tMemory.source.ID
-                        Else
-                            Dim b As branchEvent
-                            b.sourceID = pOpCode.source.ID
-                            b.target = tAddress
-                            b.opCode = tMemory
-                            branchAddress.Add(b)
-                        End If
-                    End If
-                    If tRemarks <> "" Then
-                        tRemarks &= "/"
-                    End If
-                    tRemarks &= realAddressToHexStr(tMemory.source.ID)
-                    tInst.jumpToRealAddress.Add(tMemory.source.ID)
-                Next
-                If Not hasUnknown Then
-                    stillRunning = False
-                End If
             Case "BRK"
                 Dim mbList As List(Of memoryID) = readAsAddress(&HFFFE, PrgByteType.INTERRUPT_VECTOR, taskConfig)
                 For Each mb As memoryID In mbList
@@ -558,7 +570,7 @@ Module cpu
                 tInst.setFlagChange(True, False, False, False, False, False)
                 oInst = tInst
             Case "CLI", "SEI"
-                If opTable(pOpCode.currentValue).name = "SEI" Then
+                If opTable(pOpCode.currentValue).name = "CLI" Then
                     addBRKTask(pOpCode.source)
                 End If
 

@@ -86,6 +86,7 @@ Partial Class frmMain
         txtIndirectAddress = New TextBox()
         Label4 = New Label()
         txtDataRange = New TextBox()
+        chkTraceJump = New CheckBox()
         TabControl1.SuspendLayout()
         TabPage1.SuspendLayout()
         TabPage2.SuspendLayout()
@@ -106,13 +107,13 @@ Partial Class frmMain
         txtFilePath.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
         txtFilePath.Location = New Point(74, 7)
         txtFilePath.Name = "txtFilePath"
-        txtFilePath.Size = New Size(1160, 23)
+        txtFilePath.Size = New Size(1057, 23)
         txtFilePath.TabIndex = 1
         ' 
         ' btnFilePicker
         ' 
         btnFilePicker.Anchor = AnchorStyles.Top Or AnchorStyles.Right
-        btnFilePicker.Location = New Point(1233, 7)
+        btnFilePicker.Location = New Point(1130, 7)
         btnFilePicker.Name = "btnFilePicker"
         btnFilePicker.Size = New Size(30, 24)
         btnFilePicker.TabIndex = 2
@@ -126,9 +127,9 @@ Partial Class frmMain
         ' btnProcess
         ' 
         btnProcess.Anchor = AnchorStyles.Top Or AnchorStyles.Right
-        btnProcess.Location = New Point(1269, 7)
+        btnProcess.Location = New Point(1184, 65)
         btnProcess.Name = "btnProcess"
-        btnProcess.Size = New Size(95, 81)
+        btnProcess.Size = New Size(95, 23)
         btnProcess.TabIndex = 6
         btnProcess.Text = "Process"
         btnProcess.UseVisualStyleBackColor = True
@@ -648,7 +649,7 @@ Partial Class frmMain
         txtIndirectAddress.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
         txtIndirectAddress.Location = New Point(170, 36)
         txtIndirectAddress.Name = "txtIndirectAddress"
-        txtIndirectAddress.Size = New Size(1093, 23)
+        txtIndirectAddress.Size = New Size(990, 23)
         txtIndirectAddress.TabIndex = 3
         ' 
         ' Label4
@@ -665,14 +666,27 @@ Partial Class frmMain
         txtDataRange.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
         txtDataRange.Location = New Point(170, 65)
         txtDataRange.Name = "txtDataRange"
-        txtDataRange.Size = New Size(1093, 23)
+        txtDataRange.Size = New Size(990, 23)
         txtDataRange.TabIndex = 4
+        ' 
+        ' chkTraceJump
+        ' 
+        chkTraceJump.Anchor = AnchorStyles.Top Or AnchorStyles.Right
+        chkTraceJump.Checked = True
+        chkTraceJump.CheckState = CheckState.Checked
+        chkTraceJump.Location = New Point(1184, 7)
+        chkTraceJump.Name = "chkTraceJump"
+        chkTraceJump.Size = New Size(180, 57)
+        chkTraceJump.TabIndex = 9
+        chkTraceJump.Text = "Trace jumps and sub routines to another switchable bank"
+        chkTraceJump.UseVisualStyleBackColor = True
         ' 
         ' frmMain
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         ClientSize = New Size(1370, 671)
+        Controls.Add(chkTraceJump)
         Controls.Add(txtDataRange)
         Controls.Add(Label4)
         Controls.Add(txtIndirectAddress)
@@ -759,5 +773,6 @@ Partial Class frmMain
     Friend WithEvents ColumnHeader13 As ColumnHeader
     Friend WithEvents ColumnHeader14 As ColumnHeader
     Friend WithEvents txtMappingActivation As TextBox
+    Friend WithEvents chkTraceJump As CheckBox
 
 End Class
