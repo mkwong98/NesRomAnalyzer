@@ -82,6 +82,7 @@ Module cpu
     Private currentRealAddress As UInt32
     Private bankSwitchActivations As List(Of bankSwitchActivation)
     Private traceJump As Boolean
+    Private currentBank As String
 
 
     Public Sub init()
@@ -139,6 +140,7 @@ Module cpu
         pc(0).currentValue = t.memory.address And &HFF
         pc(1).currentValue = t.memory.address >> 8
         taskConfig = t.memory.config
+        currentBank = t.memory.bank
         currentRealAddress = t.memory.ID
     End Sub
 
@@ -199,9 +201,11 @@ Module cpu
                     isRunning = True
                     pc(1).currentValue = b.target >> 8
                     pc(0).currentValue = b.target And &HFF
+                    pcVal = b.target
                     currentRealAddress = opCode.source.ID
                     taskConfig = b.opCode.source.config
                     opCode.source.config = taskConfig
+                    currentBank = b.opCode.source.bank
                     logBranch(b.target, b.sourceID)
                 End If
             End While
@@ -249,14 +253,14 @@ Module cpu
                 tInst.subAddress = tAddress
                 tMBList = read(tAddress, PrgByteType.PEEK, taskConfig)
                 For Each tMemory In tMBList
-                    If (tMemory.source.bank = "") Or (tMemory.source.bank = operand(0).source.bank) Or traceJump Then
+                    If (tMemory.source.bank = "") Or (tMemory.source.bank = currentBank) Or traceJump Then
                         addJSRTask(tMemory.source)
                         If tRemarks <> "" Then
                             tRemarks &= "/"
                         End If
                         tRemarks &= realAddressToHexStr(tMemory.source.ID)
                         tInst.subRealAddress.Add(tMemory.source.ID)
-                        If (tMemory.source.bank = "") Or (tMemory.source.bank = operand(0).source.bank) Then
+                        If (tMemory.source.bank = "") Or (tMemory.source.bank = currentBank) Then
                             tInst.subFixedRealAddress.Add(tMemory.source.ID)
                         End If
                     End If
@@ -273,7 +277,7 @@ Module cpu
                     Dim hasUnknown As Boolean = False
                     Dim isFirstUnknown As Boolean = True
                     For Each tMemory In tMBList
-                        If (tMemory.source.bank = "") Or (tMemory.source.bank = operand(0).source.bank) Or traceJump Then
+                        If (tMemory.source.bank = "") Or (tMemory.source.bank = currentBank) Or traceJump Then
                             If Not tMemory.known Then
                                 hasUnknown = True
                                 If isFirstUnknown Then
@@ -281,6 +285,7 @@ Module cpu
                                     pc(1).currentValue = operand(1).currentValue
                                     pc(0).currentValue = operand(0).currentValue
                                     pRealAddress = tMemory.source.ID
+                                    currentBank = tMemory.source.bank
                                 Else
                                     Dim b As branchEvent
                                     b.sourceID = pOpCode.source.ID

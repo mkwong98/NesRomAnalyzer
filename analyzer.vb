@@ -1754,11 +1754,13 @@ Module analyzer
                                         Exit For
                                     End If
                                 Next
-                                If hasOutOfRange Or jInst.jumpToRealAddress.Count > 1 Then
+                                If hasOutOfRange Or jInst.jumpToRealAddress.Count <> 1 Then
                                     'convert to jump block
                                     newJump.jumpType = JumpBlockType.JMP
                                     newJump.blockName = "jump(0x" & addressToHexStr(jInst.jumpToAddress) & ");"
-                                    addJumpAddress(jInst.jumpToRealAddress(0))
+                                    If jInst.jumpToRealAddress.Count > 0 Then
+                                        addJumpAddress(jInst.jumpToRealAddress(0))
+                                    End If
                                 ElseIf jInst.jumpToRealAddress.Count = 1 Then
                                     'convert to goto
                                     markLabel(pParentBlock, jInst.jumpToRealAddress(0))

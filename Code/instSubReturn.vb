@@ -40,6 +40,9 @@ Public Class instSubReturn
         Dim s As String = printLabel()
         If Not restoreFlags Then
             s &= tabStr & "popAddress();" & vbCrLf
+        Else
+            s &= tabStr & "popStatus();" & vbCrLf
+            s &= tabStr & "popIRAddress();" & vbCrLf
         End If
         s &= tabStr & "return;" & vbCrLf
         Return s

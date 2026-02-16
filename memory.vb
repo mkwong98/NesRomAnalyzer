@@ -61,6 +61,9 @@ Module memory
         Else
             result = getMappedMemoryBytes(pAddress, pUsage, pConfig)
         End If
+        If result.Count = 0 Then
+            Dim debug As Integer = 0
+        End If
         Return result
     End Function
 
