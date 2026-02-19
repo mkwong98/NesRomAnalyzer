@@ -19,6 +19,13 @@
     Public Overrides Function getRequiredMemoryTarget() As List(Of memoryTarget)
         Dim l As New List(Of memoryTarget)
         l.Add(operand)
+        Select Case operand.addrMode
+            Case AddressingMode.ABSOLUTE_INDEXED_X, AddressingMode.INDEXED_INDIRECT_X, AddressingMode.ZERO_PAGE_INDEXED_X
+                l.Add(createCPURegisterMemoryTarget(CpuRegister.x))
+            Case AddressingMode.ABSOLUTE_INDEXED_Y, AddressingMode.INDIRECT_INDEXED_Y, AddressingMode.ZERO_PAGE_INDEXED_Y
+                l.Add(createCPURegisterMemoryTarget(CpuRegister.y))
+        End Select
+
         Dim t As memoryTarget = createCPURegisterMemoryTarget(CpuRegister.a)
         l.Add(t)
         Return l

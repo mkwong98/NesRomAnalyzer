@@ -560,9 +560,6 @@ Module analyzer
             Next
         End If
 
-
-
-
         'trace all required reg and flag changes
         For i As Integer = 1 To fullCode.Count - 1
             frm.lblRemark.Text = i & " / " & fullCode.Count
@@ -927,7 +924,7 @@ Module analyzer
                                 fullCode(p + 1).subReturnAddresses = fullCode(p + 1).subReturnAddresses.Distinct().ToList()
                                 skipNextBackAddress = True
                                 b.hasReturned = True
-                            Else
+                            ElseIf fullCode(p).subReturnAddresses.Count > 0 Then
                                 traceEnd = True
                             End If
                         Next
@@ -995,8 +992,6 @@ Module analyzer
             End If
 
         Loop
-
-
 
         'trace the further addresses
         For i As Integer = 0 To furtherTraceAddresses.Count - 1
