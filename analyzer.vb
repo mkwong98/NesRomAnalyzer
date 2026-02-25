@@ -1752,9 +1752,13 @@ Module analyzer
                                 If hasOutOfRange Or jInst.jumpToRealAddress.Count <> 1 Then
                                     'convert to jump block
                                     newJump.jumpType = JumpBlockType.JMP
-                                    newJump.blockName = "jump(0x" & addressToHexStr(jInst.jumpToAddress) & ");"
-                                    If jInst.jumpToRealAddress.Count > 0 Then
-                                        addJumpAddress(jInst.jumpToRealAddress(0))
+                                    If jInst.jumpToRealAddress.Count = 1 And jInst.jumpToFixedRealAddress.Count = 1 Then
+                                        newJump.blockName = "SUB_" & realAddressToHexStr(jInst.jumpToFixedRealAddress(0))
+                                    Else
+                                        newJump.blockName = "jump(0x" & addressToHexStr(jInst.jumpToAddress) & ");"
+                                        If jInst.jumpToRealAddress.Count > 0 Then
+                                            addJumpAddress(jInst.jumpToRealAddress(0))
+                                        End If
                                     End If
                                 ElseIf jInst.jumpToRealAddress.Count = 1 Then
                                     'convert to goto
@@ -2226,8 +2230,12 @@ Module analyzer
         If type = JumpBlockType.JGT Then
             newJump.blockName = "L_" & realAddressToHexStr(bInst.branchToAddress(0))
         Else
-            newJump.blockName = "jump(0x" & addressToHexStr(bInst.branchAddress) & ");"
-            addJumpAddress(bInst.branchToAddress(0))
+            If bInst.branchToAddress.Count = 1 And bInst.branchToFixedAddress.Count = 1 Then
+                newJump.blockName = "SUB_" & realAddressToHexStr(bInst.branchToFixedAddress(0))
+            Else
+                newJump.blockName = "jump(0x" & addressToHexStr(bInst.branchAddress) & ");"
+                addJumpAddress(bInst.branchToAddress(0))
+            End If
         End If
         ifPart.addCodeBlock(newJump)
         ifPart.realAddress = newJump.realAddress

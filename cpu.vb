@@ -299,6 +299,9 @@ Module cpu
                             End If
                             tRemarks &= realAddressToHexStr(tMemory.source.ID)
                             tInst.jumpToRealAddress.Add(tMemory.source.ID)
+                            If (tMemory.source.bank = "") Or (tMemory.source.bank = currentBank) Then
+                                tInst.jumpToFixedRealAddress.Add(tMemory.source.ID)
+                            End If
                         End If
 
                     Next
@@ -538,6 +541,9 @@ Module cpu
                         branchAddress.Add(b)
                     End If
                     tInst.branchToAddress.Add(tMemory.source.ID)
+                    If (tMemory.source.bank = "") Or (tMemory.source.bank = currentBank) Then
+                        tInst.branchToFixedAddress.Add(tMemory.source.ID)
+                    End If
                 Next
 
                 oInst = tInst

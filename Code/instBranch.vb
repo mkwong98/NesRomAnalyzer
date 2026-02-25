@@ -47,6 +47,8 @@
         branchAddress = Convert.ToUInt16(s(2), 16)
         branchToAddress.Clear()
         branchToAddress.AddRange(hexStrToRealAddressList(s(3)))
+        branchToFixedAddress.Clear()
+        branchToFixedAddress.AddRange(hexStrToRealAddressList(s(4)))
     End Sub
 
     Public Overrides Function saveInstructionContentToString() As String
@@ -65,7 +67,7 @@
             Case FlagID.z
                 s &= "Z"
         End Select
-        s &= ";" & flagIsSet.ToString & ";" & addressToHexStr(branchAddress) & ";" & realAddressListToHexStr(branchToAddress)
+        s &= ";" & flagIsSet.ToString & ";" & addressToHexStr(branchAddress) & ";" & realAddressListToHexStr(branchToAddress) & ";" & realAddressListToHexStr(branchToFixedAddress)
         Return s
     End Function
 

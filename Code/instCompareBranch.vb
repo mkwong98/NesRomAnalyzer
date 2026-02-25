@@ -33,6 +33,8 @@
         branchAddress = Convert.ToUInt16(s(4), 16)
         branchToAddress.Clear()
         branchToAddress.AddRange(hexStrToRealAddressList(s(5)))
+        branchToFixedAddress.Clear()
+        branchToFixedAddress.AddRange(hexStrToRealAddressList(s(6)))
     End Sub
 
     Public Overrides Function getRequiredMemoryTarget() As List(Of memoryTarget)
@@ -70,7 +72,7 @@
             Case FlagID.z
                 s &= "Z"
         End Select
-        s &= ";" & flagIsSet.ToString & ";" & addressToHexStr(branchAddress) & ";" & realAddressListToHexStr(branchToAddress)
+        s &= ";" & flagIsSet.ToString & ";" & addressToHexStr(branchAddress) & ";" & realAddressListToHexStr(branchToAddress) & ";" & realAddressListToHexStr(branchToFixedAddress)
         Return s
     End Function
 

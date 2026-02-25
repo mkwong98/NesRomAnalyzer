@@ -4,6 +4,7 @@
     Public isIndirect As Boolean
     Public jumpToAddress As UInt16
     Public jumpToRealAddress As New List(Of UInt32)
+    Public jumpToFixedRealAddress As New List(Of UInt32)
     Public indirectJumpTargets As New List(Of UInt16)
     Public indirectJumpTargetConfigs As New List(Of String)
     Public indirectJumpRealTargets As New List(Of UInt32)
@@ -16,10 +17,12 @@
         Dim s() As String = r.Split(";"c)
         jumpToRealAddress.Clear()
         jumpToRealAddress.AddRange(hexStrToRealAddressList(s(0)))
-        jumpToAddress = Convert.ToUInt16(s(1), 16)
-        isIndirect = CBool(s(2))
-        If s.Length > 3 Then
-            readIndirectJumpTargetString(s(3))
+        jumpToFixedRealAddress.Clear()
+        jumpToFixedRealAddress.AddRange(hexStrToRealAddressList(s(1)))
+        jumpToAddress = Convert.ToUInt16(s(2), 16)
+        isIndirect = CBool(s(3))
+        If s.Length > 4 Then
+            readIndirectJumpTargetString(s(4))
         End If
     End Sub
 
@@ -42,7 +45,7 @@
     End Function
 
     Public Overrides Function saveInstructionContentToString() As String
-        Return realAddressListToHexStr(jumpToRealAddress) & ";" & addressToHexStr(jumpToAddress) & ";" & isIndirect.ToString & ";" & getIndirectJumpTargetString() & ";"
+        Return realAddressListToHexStr(jumpToRealAddress) & ";" & realAddressListToHexStr(jumpToFixedRealAddress) & ";" & addressToHexStr(jumpToAddress) & ";" & isIndirect.ToString & ";" & getIndirectJumpTargetString() & ";"
     End Function
 
     Public Function getIndirectJumpTargetString() As String
